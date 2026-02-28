@@ -1,0 +1,28 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/refresh-scores",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/refresh-static-scores",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/sync-water-levels",
+      "schedule": "0 */2 * * *"
+    },
+    {
+      "path": "/api/cron/ingest-spots",
+      "schedule": "0 2 * * 0"
+    },
+    {
+      "path": "/api/cron/enrich-spots",
+      "schedule": "0 4 * * 1"
+    },
+    {
+      "path": "/api/cron/link-stations",
+      "schedule": "0 5 * * 0"
+    }
+  ]
+}

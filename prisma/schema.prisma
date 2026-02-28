@@ -1,0 +1,408 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions", "fullTextSearch"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [postgis]
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  username      String?   @unique
+  image         String?
+  bio           String?
+  level         Int       @default(1)
+  xp            Int       @default(0)
+  isPremium     Boolean   @default(false)
+  stripeId      String?   @unique
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  spots         Spot[]
+  catches       Catch[]
+  reviews       Review[]
+  favorites     Favorite[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Spot {
+  id             String       @id @default(cuid())
+  slug           String       @unique
+  name           String
+  description    String?      @db.Text
+  latitude       Float
+  longitude      Float
+  department     String
+  commune        String?
+  waterType      WaterType
+  waterCategory  WaterCategory?
+  fishingTypes   FishingType[]
+  accessibility  Json?
+  status         SpotStatus   @default(PENDING)
+  isVerified     Boolean      @default(false)
+  isPremium      Boolean      @default(false)
+  averageRating  Float        @default(0)
+  reviewCount    Int          @default(0)
+  viewCount      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Auto-discovery fields
+  dataOrigin       DataOrigin @default(USER)
+  externalId       String?    @unique
+  externalSource   String?
+
+  // Scoring fields
+  staticScore      Float?
+  dynamicScore     Float?
+  fishabilityScore Float?
+  scoreUpdatedAt   DateTime?
+
+  // Linked monitoring stations
+  hydroStationCode String?
+  tempStationCode  String?
+
+  authorId       String?
+  author         User?        @relation(fields: [authorId], references: [id])
+  images         SpotImage[]
+  species        SpotSpecies[]
+  catches        Catch[]
+  reviews        Review[]
+  favorites      Favorite[]
+  regulations    SpotRegulation[]
+  speciesObservations SpeciesObservation[]
+  waterQualityData    WaterQualitySnapshot[]
+
+  @@index([department])
+  @@index([waterType])
+  @@index([status])
+  @@index([averageRating(sort: Desc)])
+  @@index([fishabilityScore(sort: Desc)])
+  @@index([dataOrigin])
+  @@map("spots")
+}
+
+model SpotImage {
+  id        String   @id @default(cuid())
+  url       String
+  alt       String?
+  width     Int?
+  height    Int?
+  isPrimary Boolean  @default(false)
+  spotId    String
+  spot      Spot     @relation(fields: [spotId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@map("spot_images")
+}
+
+model SpotSpecies {
+  id        String      @id @default(cuid())
+  spotId    String
+  spot      Spot        @relation(fields: [spotId], references: [id], onDelete: Cascade)
+  speciesId String
+  species   FishSpecies @relation(fields: [speciesId], references: [id])
+  abundance Abundance   @default(MODERATE)
+
+  @@unique([spotId, speciesId])
+  @@map("spot_species")
+}
+
+model FishSpecies {
+  id              String        @id @default(cuid())
+  name            String        @unique
+  scientificName  String?
+  category        FishCategory
+  minLegalSize    Int?
+  imageUrl        String?
+
+  // FishBase enrichment fields
+  maxLengthCm     Float?
+  maxWeightKg     Float?
+  optimalTempMin  Float?
+  optimalTempMax  Float?
+  feedingType     String?
+  habitat         String?
+  spawnMonthStart Int?
+  spawnMonthEnd   Int?
+
+  spots           SpotSpecies[]
+  catches         Catch[]
+
+  @@map("fish_species")
+}
+
+model Catch {
+  id          String      @id @default(cuid())
+  weight      Float?
+  length      Float?
+  technique   String?
+  bait        String?
+  imageUrl    String?
+  notes       String?     @db.Text
+  isReleased  Boolean     @default(true)
+  caughtAt    DateTime    @default(now())
+  weatherTemp Float?
+  weatherDesc String?
+  pressure    Float?
+  moonPhase   String?
+  waterTemp   Float?
+  createdAt   DateTime    @default(now())
+
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  spotId      String
+  spot        Spot        @relation(fields: [spotId], references: [id])
+  speciesId   String
+  species     FishSpecies @relation(fields: [speciesId], references: [id])
+
+  @@index([userId])
+  @@index([spotId])
+  @@index([caughtAt(sort: Desc)])
+  @@map("catches")
+}
+
+model Review {
+  id             String   @id @default(cuid())
+  rating         Int
+  comment        String?  @db.Text
+  fishDensity    Int?
+  cleanliness    Int?
+  tranquility    Int?
+  accessibility  Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  spotId         String
+  spot           Spot     @relation(fields: [spotId], references: [id])
+
+  @@unique([userId, spotId])
+  @@map("reviews")
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  listName  String   @default("default")
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  spotId    String
+  spot      Spot     @relation(fields: [spotId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, spotId, listName])
+  @@map("favorites")
+}
+
+model SpotRegulation {
+  id              String         @id @default(cuid())
+  spotId          String
+  spot            Spot           @relation(fields: [spotId], references: [id], onDelete: Cascade)
+  type            RegulationType
+  description     String         @db.Text
+  startDate       DateTime?
+  endDate         DateTime?
+  isActive        Boolean        @default(true)
+  source          String?
+  lastSyncedAt    DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@map("spot_regulations")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?
+  isRead    Boolean          @default(false)
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+enum WaterType {
+  RIVER
+  LAKE
+  POND
+  SEA
+  CANAL
+  RESERVOIR
+  STREAM
+}
+
+enum WaterCategory {
+  FIRST
+  SECOND
+}
+
+enum FishingType {
+  SPINNING
+  FLY
+  COARSE
+  CARP
+  SURFCASTING
+  TROLLING
+  FLOAT_TUBE
+  BOAT
+  SHORE
+}
+
+enum FishCategory {
+  CARNIVORE
+  SALMONID
+  CYPRINID
+  CATFISH
+  MARINE
+  CRUSTACEAN
+  OTHER
+}
+
+enum SpotStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REPORTED
+  ARCHIVED
+}
+
+enum Abundance {
+  RARE
+  LOW
+  MODERATE
+  HIGH
+  VERY_HIGH
+}
+
+enum RegulationType {
+  NO_KILL
+  CATCH_LIMIT
+  SIZE_LIMIT
+  SEASONAL_BAN
+  PERMANENT_BAN
+  NIGHT_BAN
+  RESERVE
+  POLLUTION_ALERT
+  DROUGHT_ALERT
+  FLOOD_ALERT
+  SPECIFIC_GEAR
+}
+
+enum NotificationType {
+  NEW_SPOT_NEARBY
+  REGULATION_CHANGE
+  IDEAL_CONDITIONS
+  CATCH_LIKE
+  REVIEW_REPLY
+  SYSTEM
+}
+
+enum DataOrigin {
+  USER
+  AUTO_HUBEAU
+  AUTO_SANDRE
+  AUTO_OSM
+}
+
+model SpeciesObservation {
+  id              String   @id @default(cuid())
+  spotId          String
+  spot            Spot     @relation(fields: [spotId], references: [id], onDelete: Cascade)
+  speciesCode     String
+  speciesName     String
+  scientificName  String?
+  count           Int?
+  observationDate DateTime
+  sourceCampaign  String?
+  createdAt       DateTime @default(now())
+
+  @@index([spotId])
+  @@index([speciesCode])
+  @@unique([spotId, speciesCode, observationDate])
+  @@map("species_observations")
+}
+
+model WaterQualitySnapshot {
+  id              String   @id @default(cuid())
+  spotId          String
+  spot            Spot     @relation(fields: [spotId], references: [id], onDelete: Cascade)
+  parameter       String
+  value           Float
+  unit            String
+  measurementDate DateTime
+  stationCode     String
+  createdAt       DateTime @default(now())
+
+  @@index([spotId])
+  @@unique([spotId, parameter, measurementDate])
+  @@map("water_quality_snapshots")
+}
+
+model IngestionLog {
+  id           String    @id @default(cuid())
+  source       String
+  status       String
+  spotsCreated Int       @default(0)
+  spotsUpdated Int       @default(0)
+  spotsSkipped Int       @default(0)
+  errorMessage String?   @db.Text
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+  metadata     Json?
+
+  @@index([source, startedAt(sort: Desc)])
+  @@map("ingestion_logs")
+}
