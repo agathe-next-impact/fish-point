@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { WATER_TYPE_LABELS, FISHING_TYPE_LABELS, ABUNDANCE_LABELS } from '@/lib/constants';
 import { formatDate } from '@/lib/utils';
-import { SpotGallery } from './SpotGallery';
 import { SpotRegulations } from './SpotRegulations';
 import { SpotWeather } from './SpotWeather';
 import { SpotWaterLevel } from './SpotWaterLevel';
@@ -31,11 +30,6 @@ export function SpotDetail({ spot }: SpotDetailProps) {
     <div className="max-w-4xl mx-auto">
       {/* Drought restriction banner (go/no-go) */}
       <SpotDroughtBanner spotId={spot.id} />
-
-      {/* Hero */}
-      <div className="mb-6">
-        <SpotGallery images={spot.images} spotName={spot.name} spotId={spot.id} />
-      </div>
 
       {/* Title section */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
