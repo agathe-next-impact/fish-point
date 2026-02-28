@@ -171,7 +171,7 @@ async function processStation(
     data: {
       slug,
       name,
-      description: `Station de suivi piscicole ${(station.libelle_station || station.code_station).trim()}. Cours d'eau : ${station.libelle_entite_hydrographique || 'non renseigné'}. Commune : ${station.libelle_commune || 'non renseignée'}.`,
+      description: buildHubeauDescription(station, waterType),
       latitude: lat,
       longitude: lon,
       department: station.code_departement,
@@ -296,6 +296,37 @@ async function linkToFishSpecies(
       create: { spotId, speciesId: match.id, abundance },
     });
   }
+}
+
+const FAUNA_BY_WATER: Record<string, { poissons: string[]; insectes: string[]; predateurs: string[] }> = {
+  RIVER: {
+    poissons: ['Brochet', 'Sandre', 'Perche', 'Gardon', 'Chevesne', 'Barbeau'],
+    insectes: ['Éphémère', 'Libellule', 'Chironome'],
+    predateurs: ['Héron cendré', 'Grand cormoran', 'Martin-pêcheur'],
+  },
+  LAKE: {
+    poissons: ['Brochet', 'Sandre', 'Perche', 'Carpe commune', 'Gardon', 'Tanche'],
+    insectes: ['Libellule', 'Demoiselle', 'Éphémère'],
+    predateurs: ['Héron cendré', 'Grand cormoran', 'Grèbe huppé'],
+  },
+  STREAM: {
+    poissons: ['Truite fario', 'Vairon', 'Chabot', 'Goujon', 'Loche franche'],
+    insectes: ['Éphémère', 'Phrygane (porte-bois)', 'Perle (plécoptère)'],
+    predateurs: ['Martin-pêcheur', 'Cincle plongeur', 'Bergeronnette des ruisseaux'],
+  },
+};
+
+function buildHubeauDescription(station: HubeauPoissonStation, waterType: string): string {
+  const fauna = FAUNA_BY_WATER[waterType] || FAUNA_BY_WATER['RIVER'];
+  const parts = [
+    `Station de suivi piscicole ${(station.libelle_station || station.code_station).trim()}.`,
+    `Cours d'eau : ${station.libelle_entite_hydrographique || 'non renseigné'}.`,
+    `Commune : ${station.libelle_commune || 'non renseignée'}.`,
+    `Poissons présents : ${fauna.poissons.join(', ')}.`,
+    `Insectes et invertébrés : ${fauna.insectes.join(', ')}.`,
+    `Prédateurs et oiseaux : ${fauna.predateurs.join(', ')}.`,
+  ];
+  return parts.join(' ');
 }
 
 function inferFishingTypes(waterType: string): FishingType[] {

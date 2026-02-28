@@ -23,6 +23,8 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  passwordHash  String?
+
   accounts      Account[]
   sessions      Session[]
   spots         Spot[]
@@ -30,6 +32,16 @@ model User {
   reviews       Review[]
   favorites     Favorite[]
   notifications Notification[]
+
+  // Private member features
+  privateSpots       PrivateSpot[]
+  alertSubscriptions AlertSubscription[]
+  fishingCards       FishingCard[]
+  createdGroups      FishingGroup[]        @relation("GroupCreator")
+  groupMemberships   GroupMember[]
+  sharedCatches      SharedCatch[]
+  sharedCatchLikes   SharedCatchLike[]
+  sharedCatchComments SharedCatchComment[]
 
   @@map("users")
 }
@@ -122,6 +134,7 @@ model Spot {
   speciesObservations SpeciesObservation[]
   waterQualityData    WaterQualitySnapshot[]
   biologicalIndices   BiologicalIndex[]
+  alertSubscriptions  AlertSubscription[]
 
   @@index([department])
   @@index([waterType])
@@ -199,12 +212,39 @@ model Catch {
   waterTemp   Float?
   createdAt   DateTime    @default(now())
 
+  // Enhanced catch log fields
+  lureType       String?
+  lureColor      String?
+  lureSize       String?
+  rigType        String?
+  hookSize       String?
+  lineWeight     String?
+
+  // Private geolocation (never exposed publicly)
+  catchLatitude  Float?
+  catchLongitude Float?
+
+  // Extended weather data
+  windSpeed      Float?
+  windDirection  Float?
+  cloudCover     Float?
+  humidity       Float?
+
+  // Offline sync
+  clientId       String?   @unique
+  syncedAt       DateTime?
+
+  // Visibility
+  isPublic       Boolean   @default(true)
+
   userId      String
   user        User        @relation(fields: [userId], references: [id])
   spotId      String
   spot        Spot        @relation(fields: [spotId], references: [id])
   speciesId   String
   species     FishSpecies @relation(fields: [speciesId], references: [id])
+
+  sharedCatch SharedCatch?
 
   @@index([userId])
   @@index([spotId])
@@ -354,6 +394,13 @@ enum NotificationType {
   CATCH_LIKE
   REVIEW_REPLY
   SYSTEM
+  FISHING_CARD_EXPIRY
+  SEASON_OPENING
+  WATER_LEVEL_ALERT
+  GROUP_INVITE
+  GROUP_TRIP
+  SHARED_CATCH_LIKE
+  SHARED_CATCH_COMMENT
 }
 
 enum DataOrigin {
@@ -414,6 +461,200 @@ model BiologicalIndex {
   @@unique([spotId, indexType, measurementDate])
   @@map("biological_indices")
 }
+
+// ─── Private Spots ──────────────────────────────────────────────
+
+model PrivateSpot {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  latitude    Float
+  longitude   Float
+  color       String?  @default("#3b82f6")
+  icon        String?  @default("pin")
+  notes       String?  @db.Text
+  tags        String[]
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  visits      PrivateSpotVisit[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@map("private_spots")
+}
+
+model PrivateSpotVisit {
+  id            String      @id @default(cuid())
+  privateSpotId String
+  privateSpot   PrivateSpot @relation(fields: [privateSpotId], references: [id], onDelete: Cascade)
+  visitDate     DateTime    @default(now())
+  notes         String?     @db.Text
+  rating        Int?
+  conditions    Json?
+
+  @@index([privateSpotId])
+  @@map("private_spot_visits")
+}
+
+// ─── Alert Subscriptions ────────────────────────────────────────
+
+model AlertSubscription {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type        AlertType
+  spotId      String?
+  spot        Spot?     @relation(fields: [spotId], references: [id], onDelete: Cascade)
+
+  config      Json?
+  isActive    Boolean   @default(true)
+  lastTriggered DateTime?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, type])
+  @@map("alert_subscriptions")
+}
+
+enum AlertType {
+  IDEAL_CONDITIONS
+  REGULATION_REMINDER
+  WATER_LEVEL_ABNORMAL
+  CUSTOM_SPOT_ACTIVITY
+}
+
+// ─── Social: Groups & Trips ─────────────────────────────────────
+
+model FishingGroup {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  inviteCode  String   @unique @default(cuid())
+  createdBy   String
+  creator     User     @relation("GroupCreator", fields: [createdBy], references: [id])
+
+  members     GroupMember[]
+  trips       GroupTrip[]
+
+  createdAt   DateTime @default(now())
+
+  @@map("fishing_groups")
+}
+
+model GroupMember {
+  id       String       @id @default(cuid())
+  groupId  String
+  group    FishingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     GroupRole     @default(MEMBER)
+  joinedAt DateTime     @default(now())
+
+  @@unique([groupId, userId])
+  @@map("group_members")
+}
+
+enum GroupRole {
+  ADMIN
+  MEMBER
+}
+
+model GroupTrip {
+  id          String       @id @default(cuid())
+  groupId     String
+  group       FishingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  spotId      String?
+  date        DateTime
+  createdBy   String
+
+  createdAt   DateTime @default(now())
+
+  @@map("group_trips")
+}
+
+// ─── Social: Shared Catches ─────────────────────────────────────
+
+model SharedCatch {
+  id           String   @id @default(cuid())
+  catchId      String   @unique
+  catch        Catch    @relation(fields: [catchId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+
+  blurLocation Boolean  @default(true)
+  caption      String?
+
+  likes        SharedCatchLike[]
+  comments     SharedCatchComment[]
+
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@map("shared_catches")
+}
+
+model SharedCatchLike {
+  id            String      @id @default(cuid())
+  sharedCatchId String
+  sharedCatch   SharedCatch @relation(fields: [sharedCatchId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  createdAt     DateTime    @default(now())
+
+  @@unique([sharedCatchId, userId])
+  @@map("shared_catch_likes")
+}
+
+model SharedCatchComment {
+  id            String      @id @default(cuid())
+  sharedCatchId String
+  sharedCatch   SharedCatch @relation(fields: [sharedCatchId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  content       String
+  createdAt     DateTime    @default(now())
+
+  @@map("shared_catch_comments")
+}
+
+// ─── Fishing Card ───────────────────────────────────────────────
+
+model FishingCard {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  cardNumber      String?
+  aappma          String?
+  department      String?
+  federation      String?
+
+  startDate       DateTime
+  endDate         DateTime
+
+  hasReciprocity    Boolean @default(false)
+  reciprocityType   String?
+
+  reminderSent    Boolean  @default(false)
+  imageUrl        String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([endDate])
+  @@map("fishing_cards")
+}
+
+// ─── Data Ingestion ─────────────────────────────────────────────
 
 model IngestionLog {
   id           String    @id @default(cuid())

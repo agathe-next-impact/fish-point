@@ -27,7 +27,7 @@ export interface GeoJSONFeatureCollection {
   features: GeoJSONFeature[];
 }
 
-export type MapLayer = 'spots' | 'heatmap' | 'regulations' | 'satellite' | 'fishability';
+export type MapLayer = 'spots' | 'heatmap' | 'regulations' | 'satellite' | 'fishability' | 'privateSpots';
 
 export interface MapFiltersState {
   radius: number;

@@ -102,6 +102,44 @@ function extractCoords(element: OverpassElement): { lat: number; lon: number } |
 /**
  * Build a description from OSM tags.
  */
+const FAUNA_BY_WATER: Record<string, { poissons: string[]; insectes: string[]; predateurs: string[] }> = {
+  RIVER: {
+    poissons: ['Brochet', 'Sandre', 'Perche', 'Gardon', 'Chevesne', 'Barbeau'],
+    insectes: ['Éphémère', 'Libellule', 'Demoiselle', 'Chironome'],
+    predateurs: ['Héron cendré', 'Grand cormoran', 'Martin-pêcheur', 'Loutre d\'Europe'],
+  },
+  LAKE: {
+    poissons: ['Brochet', 'Sandre', 'Perche', 'Carpe commune', 'Gardon', 'Tanche'],
+    insectes: ['Libellule', 'Demoiselle', 'Éphémère', 'Chironome'],
+    predateurs: ['Héron cendré', 'Grand cormoran', 'Grèbe huppé'],
+  },
+  POND: {
+    poissons: ['Carpe commune', 'Tanche', 'Gardon', 'Rotengle', 'Carassin'],
+    insectes: ['Libellule', 'Demoiselle', 'Notonecte', 'Dytique'],
+    predateurs: ['Héron cendré', 'Bihoreau gris', 'Grèbe castagneux'],
+  },
+  RESERVOIR: {
+    poissons: ['Brochet', 'Sandre', 'Perche', 'Carpe commune', 'Black bass'],
+    insectes: ['Libellule', 'Éphémère', 'Chironome'],
+    predateurs: ['Héron cendré', 'Grand cormoran', 'Balbuzard pêcheur'],
+  },
+  STREAM: {
+    poissons: ['Truite fario', 'Vairon', 'Chabot', 'Goujon', 'Loche franche'],
+    insectes: ['Éphémère', 'Phrygane (porte-bois)', 'Perle (plécoptère)', 'Simulie'],
+    predateurs: ['Martin-pêcheur', 'Cincle plongeur', 'Bergeronnette des ruisseaux'],
+  },
+  CANAL: {
+    poissons: ['Gardon', 'Brème', 'Carpe commune', 'Perche', 'Sandre'],
+    insectes: ['Libellule', 'Demoiselle', 'Chironome'],
+    predateurs: ['Héron cendré', 'Grand cormoran', 'Martin-pêcheur'],
+  },
+  SEA: {
+    poissons: ['Bar (loup)', 'Dorade royale', 'Maquereau', 'Lieu jaune', 'Sole'],
+    insectes: ['Puce de mer (talitre)', 'Crevette grise'],
+    predateurs: ['Fou de Bassan', 'Goéland argenté', 'Grand cormoran', 'Sterne caugek'],
+  },
+};
+
 function buildDescription(element: OverpassElement, waterType: string): string {
   const tags = element.tags || {};
   const parts: string[] = [];
@@ -109,13 +147,8 @@ function buildDescription(element: OverpassElement, waterType: string): string {
   if (tags.name) parts.push(tags.name);
 
   const typeLabels: Record<string, string> = {
-    LAKE: 'Lac',
-    POND: 'Étang',
-    RESERVOIR: 'Réservoir',
-    RIVER: 'Rivière',
-    STREAM: 'Ruisseau',
-    CANAL: 'Canal',
-    SEA: 'Mer',
+    LAKE: 'Lac', POND: 'Étang', RESERVOIR: 'Réservoir',
+    RIVER: 'Rivière', STREAM: 'Ruisseau', CANAL: 'Canal', SEA: 'Mer',
   };
   parts.push(`Type : ${typeLabels[waterType] || waterType}`);
 
@@ -123,6 +156,11 @@ function buildDescription(element: OverpassElement, waterType: string): string {
   if (tags.fishing === 'yes') parts.push('Pêche autorisée');
   if (tags.man_made === 'pier') parts.push('Jetée / ponton');
   if (tags.operator) parts.push(`Gestionnaire : ${tags.operator}`);
+
+  const fauna = FAUNA_BY_WATER[waterType] || FAUNA_BY_WATER['RIVER'];
+  parts.push(`Poissons présents : ${fauna.poissons.join(', ')}`);
+  parts.push(`Insectes et invertébrés : ${fauna.insectes.join(', ')}`);
+  parts.push(`Prédateurs et oiseaux : ${fauna.predateurs.join(', ')}`);
 
   return parts.join('. ') + '.';
 }

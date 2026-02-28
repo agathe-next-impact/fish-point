@@ -1,13 +1,50 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Fish } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useNotificationStore } from '@/store/notification.store';
+import { loginSchema, type LoginInput } from '@/validators/user.schema';
+import { useState } from 'react';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const addToast = useNotificationStore((s) => s.addToast);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const onSubmit = async (data: LoginInput) => {
+    try {
+      setIsSubmitting(true);
+      const result = await signIn('credentials', {
+        email: data.email,
+        password: data.password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        addToast({ type: 'error', title: 'Email ou mot de passe incorrect' });
+        return;
+      }
+
+      router.push('/map');
+      router.refresh();
+    } catch {
+      addToast({ type: 'error', title: 'Erreur de connexion' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="text-center">
@@ -32,10 +69,22 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <form className="space-y-3">
-          <Input type="email" placeholder="Email" />
-          <Input type="password" placeholder="Mot de passe" />
-          <Button className="w-full">Se connecter</Button>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+          <Input
+            type="email"
+            placeholder="Email"
+            {...register('email')}
+            error={errors.email?.message}
+          />
+          <Input
+            type="password"
+            placeholder="Mot de passe"
+            {...register('password')}
+            error={errors.password?.message}
+          />
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? 'Connexion...' : 'Se connecter'}
+          </Button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground">

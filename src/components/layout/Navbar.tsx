@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
-import { MapPin, Search, Bell, Menu, User, LogOut, Settings, Fish } from 'lucide-react';
+import { MapPin, Search, Bell, Menu, User, LogOut, Settings, Fish, BarChart3, MapPinned, AlertTriangle, Users, CreditCard } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -95,8 +95,39 @@ export function Navbar() {
                     <Link href="/profile">Mon profil</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link href="/dashboard">
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      Tableau de bord
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link href="/catches">Mes prises</Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/my-spots">
+                      <MapPinned className="h-4 w-4 mr-2" />
+                      Mes spots privés
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/alerts">
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      Alertes
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/community/groups">
+                      <Users className="h-4 w-4 mr-2" />
+                      Mes groupes
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile/fishing-cards">
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Carte de pêche
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/profile/settings">
                       <Settings className="h-4 w-4 mr-2" />

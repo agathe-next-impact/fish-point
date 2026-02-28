@@ -11,7 +11,9 @@ import { UserLocation } from './UserLocation';
 import { HeatmapLayer } from './HeatmapLayer';
 import { FishabilityLayer } from './FishabilityLayer';
 import { RegulationZones } from './RegulationZones';
+import { PrivateSpotMarker } from '@/components/private-spots/PrivateSpotMarker';
 import type { SpotListItem } from '@/types/spot';
+import type { PrivateSpotSummary } from '@/types/private-spot';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface MapBounds {
@@ -23,12 +25,13 @@ interface MapBounds {
 
 interface MapContainerProps {
   spots?: SpotListItem[];
+  privateSpots?: PrivateSpotSummary[];
   onSpotClick?: (spot: SpotListItem) => void;
   onBoundsChange?: (bounds: MapBounds) => void;
   className?: string;
 }
 
-export function MapContainer({ spots = [], onSpotClick, onBoundsChange, className }: MapContainerProps) {
+export function MapContainer({ spots = [], privateSpots = [], onSpotClick, onBoundsChange, className }: MapContainerProps) {
   const mapRef = useRef<MapRef>(null);
   const viewport = useMapStore((s) => s.viewport);
   const setViewport = useMapStore((s) => s.setViewport);
@@ -100,6 +103,10 @@ export function MapContainer({ spots = [], onSpotClick, onBoundsChange, classNam
         {activeLayers.includes('fishability') && <FishabilityLayer spots={spots} />}
 
         {activeLayers.includes('regulations') && <RegulationZones />}
+
+        {activeLayers.includes('privateSpots') && privateSpots.map((ps) => (
+          <PrivateSpotMarker key={ps.id} spot={ps} />
+        ))}
 
         <UserLocation />
       </Map>

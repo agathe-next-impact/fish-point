@@ -116,6 +116,73 @@ const SPOTS = [
   { name: 'Carnac - Plage', lat: 47.5833, lng: -3.0833, dept: '56', commune: 'Carnac', water: 'SEA' as const, cat: null, types: ['SURFCASTING' as const, 'SHORE' as const] },
 ];
 
+// --- Faune locale par type d'eau et catégorie ---
+const FAUNA: Record<string, { poissons: string[]; insectes: string[]; predateurs: string[] }> = {
+  RIVER_FIRST: {
+    poissons: ['Truite fario', 'Ombre commun', 'Vairon', 'Chabot', 'Loche franche'],
+    insectes: ['Éphémère', 'Phrygane (porte-bois)', 'Perle (plécoptère)', 'Chironome', 'Simulie'],
+    predateurs: ['Martin-pêcheur', 'Héron cendré', 'Cincle plongeur', 'Loutre d\'Europe'],
+  },
+  RIVER_SECOND: {
+    poissons: ['Brochet', 'Sandre', 'Perche', 'Gardon', 'Chevesne', 'Barbeau', 'Silure'],
+    insectes: ['Éphémère', 'Libellule (anisoptère)', 'Demoiselle (zygoptère)', 'Chironome', 'Moustique'],
+    predateurs: ['Héron cendré', 'Grand cormoran', 'Balbuzard pêcheur', 'Loutre d\'Europe'],
+  },
+  LAKE_SECOND: {
+    poissons: ['Brochet', 'Sandre', 'Perche', 'Carpe commune', 'Gardon', 'Tanche', 'Rotengle'],
+    insectes: ['Libellule (anisoptère)', 'Demoiselle (zygoptère)', 'Éphémère', 'Chironome', 'Gerris (araignée d\'eau)'],
+    predateurs: ['Héron cendré', 'Grand cormoran', 'Grèbe huppé', 'Pygargue à queue blanche'],
+  },
+  LAKE_FIRST: {
+    poissons: ['Omble chevalier', 'Truite lacustre', 'Corégone (féra)', 'Perche', 'Brochet'],
+    insectes: ['Éphémère', 'Chironome', 'Phrygane (porte-bois)', 'Libellule (anisoptère)'],
+    predateurs: ['Martin-pêcheur', 'Héron cendré', 'Plongeon arctique', 'Loutre d\'Europe'],
+  },
+  POND: {
+    poissons: ['Carpe commune', 'Carpe miroir', 'Tanche', 'Gardon', 'Rotengle', 'Carassin'],
+    insectes: ['Libellule (anisoptère)', 'Demoiselle (zygoptère)', 'Notonecte', 'Dytique', 'Gerris (araignée d\'eau)'],
+    predateurs: ['Héron cendré', 'Bihoreau gris', 'Grand cormoran', 'Grèbe castagneux'],
+  },
+  RESERVOIR: {
+    poissons: ['Brochet', 'Sandre', 'Perche', 'Carpe commune', 'Black bass', 'Gardon'],
+    insectes: ['Libellule (anisoptère)', 'Éphémère', 'Chironome', 'Demoiselle (zygoptère)'],
+    predateurs: ['Héron cendré', 'Grand cormoran', 'Balbuzard pêcheur', 'Aigle botté'],
+  },
+  STREAM: {
+    poissons: ['Truite fario', 'Vairon', 'Chabot', 'Goujon', 'Loche franche'],
+    insectes: ['Éphémère', 'Phrygane (porte-bois)', 'Perle (plécoptère)', 'Simulie', 'Chironome'],
+    predateurs: ['Martin-pêcheur', 'Cincle plongeur', 'Bergeronnette des ruisseaux', 'Loutre d\'Europe'],
+  },
+  CANAL: {
+    poissons: ['Gardon', 'Brème', 'Carpe commune', 'Perche', 'Sandre', 'Ablette'],
+    insectes: ['Libellule (anisoptère)', 'Demoiselle (zygoptère)', 'Chironome', 'Gerris (araignée d\'eau)'],
+    predateurs: ['Héron cendré', 'Grand cormoran', 'Martin-pêcheur', 'Grèbe castagneux'],
+  },
+  SEA: {
+    poissons: ['Bar (loup)', 'Dorade royale', 'Maquereau', 'Lieu jaune', 'Sole', 'Mulet'],
+    insectes: ['Puce de mer (talitre)', 'Crevette grise', 'Bernard-l\'ermite'],
+    predateurs: ['Fou de Bassan', 'Goéland argenté', 'Grand cormoran', 'Sterne caugek', 'Dauphin commun'],
+  },
+};
+
+function getFauna(waterType: string, waterCategory: string | null) {
+  const key = (waterType === 'RIVER' || waterType === 'LAKE')
+    ? `${waterType}_${waterCategory || 'SECOND'}`
+    : waterType;
+  return FAUNA[key] || FAUNA['RIVER_SECOND'];
+}
+
+function buildSpotDescription(spot: { name: string; commune: string; dept: string; water: string; cat: string | null }) {
+  const fauna = getFauna(spot.water, spot.cat);
+  const lines = [
+    `Spot de pêche situé à ${spot.commune} dans le département ${spot.dept}.`,
+    `Poissons présents : ${fauna.poissons.join(', ')}.`,
+    `Insectes et invertébrés : ${fauna.insectes.join(', ')}.`,
+    `Prédateurs et oiseaux : ${fauna.predateurs.join(', ')}.`,
+  ];
+  return lines.join(' ');
+}
+
 function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -175,7 +242,7 @@ async function main() {
       create: {
         slug,
         name: spot.name,
-        description: `Spot de pêche situé à ${spot.commune} dans le département ${spot.dept}. Un lieu apprécié des pêcheurs locaux.`,
+        description: buildSpotDescription(spot),
         latitude: spot.lat,
         longitude: spot.lng,
         department: spot.dept,

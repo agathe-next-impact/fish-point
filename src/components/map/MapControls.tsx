@@ -19,6 +19,7 @@ export function MapControls({ mapStyle, onStyleChange }: MapControlsProps) {
 
   const layers: { id: MapLayer; label: string }[] = [
     { id: 'spots', label: 'Spots' },
+    { id: 'privateSpots', label: 'Mes spots privés' },
     { id: 'heatmap', label: 'Heatmap' },
     { id: 'regulations', label: 'Zones réglementées' },
   ];

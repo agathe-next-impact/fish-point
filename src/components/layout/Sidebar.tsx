@@ -2,17 +2,22 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MapPin, List, PlusCircle, BookOpen, Users, Award, BarChart3, Settings } from 'lucide-react';
+import { MapPin, List, PlusCircle, BookOpen, Users, Award, BarChart3, Settings, MapPinned, AlertTriangle, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/map', label: 'Carte', icon: MapPin },
   { href: '/spots', label: 'Spots', icon: List },
   { href: '/spots/new', label: 'Ajouter', icon: PlusCircle },
-  { href: '/catches', label: 'Prises', icon: BarChart3 },
+  { href: '/catches', label: 'Mes prises', icon: BookOpen },
+  { href: '/my-spots', label: 'Mes spots privés', icon: MapPinned },
+  { href: '/dashboard', label: 'Tableau de bord', icon: BarChart3 },
+  { href: '/alerts', label: 'Alertes', icon: AlertTriangle },
   { href: '/regulations', label: 'Réglementation', icon: BookOpen },
   { href: '/community', label: 'Communauté', icon: Users },
+  { href: '/community/groups', label: 'Mes groupes', icon: Users },
   { href: '/community/leaderboard', label: 'Classement', icon: Award },
+  { href: '/profile/fishing-cards', label: 'Carte de pêche', icon: CreditCard },
 ];
 
 export function Sidebar() {

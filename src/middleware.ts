@@ -5,7 +5,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protected routes (auth required)
-  const protectedRoutes = ['/spots/new', '/catches', '/profile'];
+  const protectedRoutes = ['/spots/new', '/catches', '/profile', '/my-spots', '/dashboard', '/alerts', '/community/groups'];
   if (protectedRoutes.some((route) => pathname.startsWith(route))) {
     // Check for session token cookie
     const token =

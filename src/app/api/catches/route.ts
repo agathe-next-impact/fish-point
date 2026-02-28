@@ -57,8 +57,56 @@ function checkCatchPlausibility(
   return warnings;
 }
 
+// Fields that are always safe to return publicly (no private coordinates)
+const publicCatchSelect = {
+  id: true,
+  weight: true,
+  length: true,
+  technique: true,
+  bait: true,
+  imageUrl: true,
+  notes: true,
+  isReleased: true,
+  caughtAt: true,
+  weatherTemp: true,
+  weatherDesc: true,
+  pressure: true,
+  moonPhase: true,
+  waterTemp: true,
+  createdAt: true,
+  lureType: true,
+  lureColor: true,
+  lureSize: true,
+  rigType: true,
+  hookSize: true,
+  lineWeight: true,
+  windSpeed: true,
+  windDirection: true,
+  cloudCover: true,
+  humidity: true,
+  clientId: true,
+  syncedAt: true,
+  isPublic: true,
+  userId: true,
+  spotId: true,
+  speciesId: true,
+  user: { select: { id: true, name: true, username: true, image: true } },
+  spot: { select: { id: true, slug: true, name: true } },
+  species: { select: { id: true, name: true, scientificName: true } },
+} as const;
+
+// Includes private coordinates (only for owner)
+const ownerCatchSelect = {
+  ...publicCatchSelect,
+  catchLatitude: true,
+  catchLongitude: true,
+} as const;
+
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+    const currentUserId = session?.user?.id;
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
@@ -70,14 +118,13 @@ export async function GET(request: NextRequest) {
     if (userId) where.userId = userId;
     if (spotId) where.spotId = spotId;
 
+    // If requesting a specific user's catches and it's the current user, include private coords
+    const isOwnerRequest = userId && userId === currentUserId;
+
     const [catches, total] = await Promise.all([
       prisma.catch.findMany({
         where,
-        include: {
-          user: { select: { id: true, name: true, username: true, image: true } },
-          spot: { select: { id: true, slug: true, name: true } },
-          species: { select: { id: true, name: true, scientificName: true } },
-        },
+        select: isOwnerRequest ? ownerCatchSelect : publicCatchSelect,
         orderBy: { caughtAt: 'desc' },
         skip,
         take: limit,
@@ -85,8 +132,21 @@ export async function GET(request: NextRequest) {
       prisma.catch.count({ where }),
     ]);
 
+    // If not a filtered owner request, we need to add coordinates only to owned catches
+    const data = isOwnerRequest
+      ? catches
+      : catches.map((c) => {
+          if (c.userId === currentUserId) {
+            // Re-fetch would be expensive, but since we already omitted coords via select,
+            // the owner will see their own catches without coords in mixed feeds.
+            // For full coord access, they should filter by userId.
+            return c;
+          }
+          return c;
+        });
+
     return NextResponse.json({
-      data: catches,
+      data,
       meta: { total, page, limit, hasMore: skip + limit < total },
     });
   } catch (error) {
@@ -110,6 +170,16 @@ export async function POST(request: NextRequest) {
 
     const data = validation.data;
 
+    // If clientId provided, check for duplicate (offline sync dedup)
+    if (data.clientId) {
+      const existing = await prisma.catch.findUnique({
+        where: { clientId: data.clientId },
+      });
+      if (existing) {
+        return NextResponse.json({ data: existing, deduplicated: true }, { status: 200 });
+      }
+    }
+
     // Fetch species for plausibility check
     const species = await prisma.fishSpecies.findUnique({
       where: { id: data.speciesId },
@@ -129,6 +199,21 @@ export async function POST(request: NextRequest) {
         notes: data.notes,
         isReleased: data.isReleased ?? true,
         caughtAt: data.caughtAt ? new Date(data.caughtAt) : new Date(),
+        lureType: data.lureType,
+        lureColor: data.lureColor,
+        lureSize: data.lureSize,
+        rigType: data.rigType,
+        hookSize: data.hookSize,
+        lineWeight: data.lineWeight,
+        catchLatitude: data.catchLatitude,
+        catchLongitude: data.catchLongitude,
+        windSpeed: data.windSpeed,
+        windDirection: data.windDirection,
+        cloudCover: data.cloudCover,
+        humidity: data.humidity,
+        clientId: data.clientId,
+        syncedAt: data.clientId ? new Date() : undefined,
+        isPublic: data.isPublic ?? true,
       },
       include: {
         user: { select: { id: true, name: true, username: true, image: true } },

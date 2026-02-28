@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MapPin, List, PlusCircle, BookOpen, User } from 'lucide-react';
+import { MapPin, BookOpen, BarChart3, PlusCircle, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/map', label: 'Carte', icon: MapPin },
-  { href: '/spots', label: 'Spots', icon: List },
-  { href: '/spots/new', label: 'Ajouter', icon: PlusCircle },
   { href: '/catches', label: 'Prises', icon: BookOpen },
+  { href: '/catches/new', label: 'Ajouter', icon: PlusCircle },
+  { href: '/dashboard', label: 'Stats', icon: BarChart3 },
   { href: '/profile', label: 'Profil', icon: User },
 ];
 
