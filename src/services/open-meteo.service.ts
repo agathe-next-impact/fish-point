@@ -35,7 +35,7 @@ export async function fetchWeatherForCoords(
     const params = new URLSearchParams({
       latitude: cell.lat.toFixed(2),
       longitude: cell.lon.toFixed(2),
-      current: 'temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,cloud_cover,weather_code',
+      current: 'temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,cloud_cover,weather_code,uv_index,precipitation_probability,precipitation,soil_temperature_0_to_7cm,soil_moisture_0_to_7cm,direct_radiation',
       timezone: 'Europe/Paris',
     });
 
@@ -53,6 +53,12 @@ export async function fetchWeatherForCoords(
       windSpeed: raw.current.wind_speed_10m,
       cloudCover: raw.current.cloud_cover,
       weatherCode: raw.current.weather_code,
+      uvIndex: raw.current.uv_index ?? 0,
+      precipitationProbability: raw.current.precipitation_probability ?? 0,
+      precipitation: raw.current.precipitation ?? 0,
+      soilTemperature: raw.current.soil_temperature_0_to_7cm ?? 0,
+      soilMoisture: raw.current.soil_moisture_0_to_7cm ?? 0,
+      directRadiation: raw.current.direct_radiation ?? 0,
     };
   }, 1500); // 25 minutes TTL
 }

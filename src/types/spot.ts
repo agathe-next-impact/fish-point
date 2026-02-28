@@ -54,6 +54,7 @@ export interface SpotImageData {
   width: number | null;
   height: number | null;
   isPrimary: boolean;
+  source?: 'user' | 'ign' | 'wikimedia';
 }
 
 export interface SpotSpeciesData {
@@ -64,6 +65,14 @@ export interface SpotSpeciesData {
   category: string;
   abundance: Abundance;
   minLegalSize: number | null;
+  maxLengthCm: number | null;
+  maxWeightKg: number | null;
+  optimalTempMin: number | null;
+  optimalTempMax: number | null;
+  feedingType: string | null;
+  habitat: string | null;
+  spawnMonthStart: number | null;
+  spawnMonthEnd: number | null;
 }
 
 export interface SpotRegulationData {

@@ -73,6 +73,7 @@ export const nearbyQuerySchema = z.object({
 });
 
 export type CreateSpotInput = z.infer<typeof createSpotSchema>;
+export type CreateSpotFormInput = z.input<typeof createSpotSchema>;
 export type UpdateSpotInput = z.infer<typeof updateSpotSchema>;
 export type SpotFiltersInput = z.infer<typeof spotFiltersSchema>;
 export type NearbyQuery = z.infer<typeof nearbyQuerySchema>;

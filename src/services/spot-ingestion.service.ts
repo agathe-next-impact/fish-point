@@ -3,6 +3,7 @@ import { slugify } from '@/lib/utils';
 import { fetchAllFishStations, fetchAllObservationsForStation } from './hubeau-poisson.service';
 import { findNearestStation } from './water.service';
 import type { HubeauPoissonStation, HubeauFishObservation, IngestionResult } from '@/types/ingestion';
+import type { FishingType } from '@prisma/client';
 
 // Hub'Eau coordinates are in WGS84 (EPSG:4326)
 function inferWaterType(station: HubeauPoissonStation): 'RIVER' | 'LAKE' | 'STREAM' {
@@ -297,7 +298,7 @@ async function linkToFishSpecies(
   }
 }
 
-function inferFishingTypes(waterType: string): string[] {
+function inferFishingTypes(waterType: string): FishingType[] {
   switch (waterType) {
     case 'RIVER':
       return ['SPINNING', 'COARSE', 'SHORE'];

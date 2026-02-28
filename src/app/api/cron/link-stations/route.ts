@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { findNearestStation } from '@/services/water.service';
 import { findNearestTempStation } from '@/services/hubeau-temperature.service';
+import { findNearestPiezoStation } from '@/services/hubeau-piezometrie.service';
+import { findNearestHydrobioStation } from '@/services/hubeau-hydrobio.service';
 
 export const maxDuration = 300;
 
@@ -17,7 +19,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const departement = searchParams.get('departement') || undefined;
-  const type = searchParams.get('type') || 'all'; // 'hydro', 'temp', or 'all'
+  const type = searchParams.get('type') || 'all'; // 'hydro', 'temp', 'piezo', 'hydrobio', or 'all'
 
   try {
     const whereClause: Record<string, unknown> = { status: 'APPROVED' };
@@ -28,20 +30,32 @@ export async function GET(request: NextRequest) {
       whereClause.hydroStationCode = null;
     } else if (type === 'temp') {
       whereClause.tempStationCode = null;
+    } else if (type === 'piezo') {
+      whereClause.piezoStationCode = null;
+    } else if (type === 'hydrobio') {
+      whereClause.hydrobioStationCode = null;
     } else {
       whereClause.OR = [
         { hydroStationCode: null },
         { tempStationCode: null },
+        { piezoStationCode: null },
+        { hydrobioStationCode: null },
       ];
     }
 
     const spots = await prisma.spot.findMany({
       where: whereClause,
-      select: { id: true, latitude: true, longitude: true, hydroStationCode: true, tempStationCode: true },
+      select: {
+        id: true, latitude: true, longitude: true,
+        hydroStationCode: true, tempStationCode: true,
+        piezoStationCode: true, hydrobioStationCode: true,
+      },
     });
 
     let hydroLinked = 0;
     let tempLinked = 0;
+    let piezoLinked = 0;
+    let hydrobioLinked = 0;
 
     for (const spot of spots) {
       // Link hydro station
@@ -75,6 +89,38 @@ export async function GET(request: NextRequest) {
           // Non-critical
         }
       }
+
+      // Link piezo station
+      if (!spot.piezoStationCode && (type === 'all' || type === 'piezo')) {
+        try {
+          const station = await findNearestPiezoStation(spot.latitude, spot.longitude);
+          if (station) {
+            await prisma.spot.update({
+              where: { id: spot.id },
+              data: { piezoStationCode: station.code_bss },
+            });
+            piezoLinked++;
+          }
+        } catch {
+          // Non-critical
+        }
+      }
+
+      // Link hydrobio station
+      if (!spot.hydrobioStationCode && (type === 'all' || type === 'hydrobio')) {
+        try {
+          const station = await findNearestHydrobioStation(spot.latitude, spot.longitude);
+          if (station) {
+            await prisma.spot.update({
+              where: { id: spot.id },
+              data: { hydrobioStationCode: station.code_station },
+            });
+            hydrobioLinked++;
+          }
+        } catch {
+          // Non-critical
+        }
+      }
     }
 
     return NextResponse.json({
@@ -82,6 +128,8 @@ export async function GET(request: NextRequest) {
       processed: spots.length,
       hydroLinked,
       tempLinked,
+      piezoLinked,
+      hydrobioLinked,
     });
   } catch (error) {
     console.error('Link stations cron error:', error);

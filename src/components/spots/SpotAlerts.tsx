@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Droplets, CloudRain } from 'lucide-react';
+import { AlertTriangle, Droplets, CloudRain, Waves } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SpotAlertsProps {
@@ -32,6 +32,7 @@ const levelStyles = {
 const levelIcons = {
   flow: Droplets,
   flood: CloudRain,
+  flood_forecast: Waves,
   default: AlertTriangle,
 };
 

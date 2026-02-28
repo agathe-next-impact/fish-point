@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getFlowStatusForCoords } from '@/services/hubeau-ecoulement.service';
 import { findTronconForStation } from '@/services/vigicrues.service';
+import { fetchFloodForecast } from '@/services/open-meteo-flood.service';
 
 /**
  * GET /api/spots/:id/alerts
@@ -86,6 +87,22 @@ export async function GET(
       } catch {
         // Non-critical
       }
+    }
+
+    // GloFAS 7-day flood forecast
+    try {
+      const flood = await fetchFloodForecast(spot.latitude, spot.longitude);
+      if (flood && flood.riskLevel !== 'low') {
+        const levelMap = { moderate: 'info', high: 'warning', extreme: 'danger' } as const;
+        alerts.push({
+          type: 'flood_forecast',
+          level: levelMap[flood.riskLevel as keyof typeof levelMap] || 'info',
+          title: flood.label,
+          description: `Débit max prévu : ${flood.maxForecastDischarge} m³/s (pic le ${flood.peakDate}). Débit moyen : ${flood.meanDischarge} m³/s.`,
+        });
+      }
+    } catch {
+      // Non-critical
     }
 
     return NextResponse.json({ data: alerts });

@@ -30,6 +30,7 @@ export default async function CommunePage({ params }: CommunePageProps) {
     fishingTypes: s.fishingTypes, averageRating: s.averageRating,
     reviewCount: s.reviewCount, isPremium: s.isPremium,
     isVerified: s.isVerified, primaryImage: s.images[0]?.url || null,
+    fishabilityScore: s.fishabilityScore, dataOrigin: s.dataOrigin,
   }));
 
   return (

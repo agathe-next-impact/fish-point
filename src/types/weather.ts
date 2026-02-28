@@ -1,3 +1,15 @@
+export interface PollenInfo {
+  alderPollen: number;
+  birchPollen: number;
+  grassPollen: number;
+  totalPollen: number;
+  pollenLevel: 'none' | 'low' | 'moderate' | 'high';
+  uvIndex: number;
+  europeanAqi: number | null;
+  label: string;
+  insectHatchLikely: boolean;
+}
+
 export interface WeatherData {
   temperature: number;
   feelsLike: number;
@@ -10,6 +22,7 @@ export interface WeatherData {
   icon: string;
   sunrise: number;
   sunset: number;
+  pollen?: PollenInfo | null;
 }
 
 export interface WaterLevelData {

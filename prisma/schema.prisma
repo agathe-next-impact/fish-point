@@ -106,8 +106,10 @@ model Spot {
   scoreUpdatedAt   DateTime?
 
   // Linked monitoring stations
-  hydroStationCode String?
-  tempStationCode  String?
+  hydroStationCode    String?
+  tempStationCode     String?
+  piezoStationCode    String?
+  hydrobioStationCode String?
 
   authorId       String?
   author         User?        @relation(fields: [authorId], references: [id])
@@ -119,6 +121,7 @@ model Spot {
   regulations    SpotRegulation[]
   speciesObservations SpeciesObservation[]
   waterQualityData    WaterQualitySnapshot[]
+  biologicalIndices   BiologicalIndex[]
 
   @@index([department])
   @@index([waterType])
@@ -339,6 +342,9 @@ enum RegulationType {
   DROUGHT_ALERT
   FLOOD_ALERT
   SPECIFIC_GEAR
+  WATER_RESTRICTION
+  NATURA_2000
+  FLOOD_FORECAST
 }
 
 enum NotificationType {
@@ -365,6 +371,8 @@ model SpeciesObservation {
   speciesName     String
   scientificName  String?
   count           Int?
+  averageWeight   Float?
+  averageLength   Float?
   observationDate DateTime
   sourceCampaign  String?
   createdAt       DateTime @default(now())
@@ -389,6 +397,22 @@ model WaterQualitySnapshot {
   @@index([spotId])
   @@unique([spotId, parameter, measurementDate])
   @@map("water_quality_snapshots")
+}
+
+model BiologicalIndex {
+  id              String   @id @default(cuid())
+  spotId          String
+  spot            Spot     @relation(fields: [spotId], references: [id], onDelete: Cascade)
+  indexType       String   // IBGN, IBD, IPR
+  value           Float
+  qualityClass    String   // Très bon, Bon, Moyen, Médiocre, Mauvais
+  measurementDate DateTime
+  stationCode     String
+  createdAt       DateTime @default(now())
+
+  @@index([spotId])
+  @@unique([spotId, indexType, measurementDate])
+  @@map("biological_indices")
 }
 
 model IngestionLog {

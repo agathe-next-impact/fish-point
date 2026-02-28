@@ -4,11 +4,12 @@ import { queryOverpass } from './overpass.service';
 import { getDepartmentBBox, getAllDepartmentCodes } from '@/config/department-bbox';
 import type { OverpassElement, IngestionResult } from '@/types/ingestion';
 import type { BBox } from './overpass.service';
+import type { WaterType, FishingType } from '@prisma/client';
 
 /**
  * Map OSM tags to WaterType enum values.
  */
-function inferWaterTypeFromTags(tags: Record<string, string>): string {
+function inferWaterTypeFromTags(tags: Record<string, string>): WaterType {
   const water = tags.water || '';
   const natural = tags.natural || '';
   const landuse = tags.landuse || '';
@@ -35,7 +36,7 @@ function inferWaterTypeFromTags(tags: Record<string, string>): string {
 /**
  * Infer fishing types from water type.
  */
-function inferFishingTypes(waterType: string): string[] {
+function inferFishingTypes(waterType: WaterType): FishingType[] {
   switch (waterType) {
     case 'RIVER':
       return ['SPINNING', 'COARSE', 'SHORE'];

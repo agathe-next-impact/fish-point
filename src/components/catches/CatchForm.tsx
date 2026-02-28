@@ -3,7 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { createCatchSchema, type CreateCatchInput } from '@/validators/catch.schema';
+import { createCatchSchema, type CreateCatchInput, type CreateCatchFormInput } from '@/validators/catch.schema';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNotificationStore } from '@/store/notification.store';
@@ -14,14 +14,14 @@ export function CatchForm() {
   const addToast = useNotificationStore((s) => s.addToast);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<CreateCatchInput>({
+  const { register, handleSubmit, formState: { errors } } = useForm<CreateCatchFormInput>({
     resolver: zodResolver(createCatchSchema),
     defaultValues: {
       isReleased: true,
     },
   });
 
-  const onSubmit = async (data: CreateCatchInput) => {
+  const onSubmit = async (data: CreateCatchFormInput) => {
     try {
       setIsSubmitting(true);
       const res = await fetch('/api/catches', {

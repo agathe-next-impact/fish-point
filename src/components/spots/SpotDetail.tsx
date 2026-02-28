@@ -1,6 +1,6 @@
 'use client';
 
-import { Star, MapPin, Check, Share2, Heart, Navigation, Eye, Database } from 'lucide-react';
+import { Star, MapPin, Check, Share2, Heart, Navigation, Eye, Database, Accessibility, ParkingCircle, Ship, Moon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { WATER_TYPE_LABELS, FISHING_TYPE_LABELS, ABUNDANCE_LABELS } from '@/lib/constants';
@@ -12,6 +12,14 @@ import { SpotWaterLevel } from './SpotWaterLevel';
 import { SpotFishIndex } from './SpotFishIndex';
 import { SpotShareButton } from './SpotShareButton';
 import { SpotAlerts } from './SpotAlerts';
+import { SpotSpeciesCard } from './SpotSpeciesCard';
+import { SpotWaterQuality } from './SpotWaterQuality';
+import { SpotSpawnCalendar } from './SpotSpawnCalendar';
+import { SpotObservations } from './SpotObservations';
+import { SpotBiodiversity } from './SpotBiodiversity';
+import { SpotSolunar } from './SpotSolunar';
+import { SpotDroughtBanner } from './SpotDroughtBanner';
+import { SpotProtectedZones } from './SpotProtectedZones';
 import type { SpotDetail as SpotDetailType } from '@/types/spot';
 
 interface SpotDetailProps {
@@ -21,9 +29,12 @@ interface SpotDetailProps {
 export function SpotDetail({ spot }: SpotDetailProps) {
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Drought restriction banner (go/no-go) */}
+      <SpotDroughtBanner spotId={spot.id} />
+
       {/* Hero */}
       <div className="mb-6">
-        <SpotGallery images={spot.images} spotName={spot.name} />
+        <SpotGallery images={spot.images} spotName={spot.name} spotId={spot.id} />
       </div>
 
       {/* Title section */}
@@ -93,21 +104,55 @@ export function SpotDetail({ spot }: SpotDetailProps) {
             </div>
           </section>
 
+          {spot.accessibility && (
+            <section>
+              <h2 className="text-lg font-semibold mb-3">Accès & équipements</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { key: 'pmr' as const, label: 'PMR', Icon: Accessibility },
+                  { key: 'parking' as const, label: 'Parking', Icon: ParkingCircle },
+                  { key: 'boatLaunch' as const, label: 'Mise à l\u2019eau', Icon: Ship },
+                  { key: 'nightFishing' as const, label: 'Pêche de nuit', Icon: Moon },
+                ].map(({ key, label, Icon }) => {
+                  const available = spot.accessibility![key];
+                  return (
+                    <div
+                      key={key}
+                      className={`flex flex-col items-center gap-1.5 rounded-lg border p-3 text-center ${
+                        available
+                          ? 'border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800'
+                          : 'opacity-40'
+                      }`}
+                    >
+                      <Icon className={`h-5 w-5 ${available ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`} />
+                      <span className="text-xs font-medium">{label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
           {spot.species.length > 0 && (
             <section>
               <h2 className="text-lg font-semibold mb-3">Espèces présentes</h2>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {spot.species.map((s) => (
-                  <Badge key={s.id} variant="outline" className="gap-1">
-                    {s.name}
-                    <span className="text-muted-foreground text-[10px]">
-                      ({ABUNDANCE_LABELS[s.abundance]})
-                    </span>
-                  </Badge>
+                  <SpotSpeciesCard key={s.id} species={s} />
                 ))}
               </div>
             </section>
           )}
+
+          <SpotSpawnCalendar species={spot.species} />
+
+          <SpotWaterQuality spotId={spot.id} />
+
+          <SpotObservations spotId={spot.id} />
+
+          <SpotBiodiversity spotId={spot.id} />
+
+          <SpotProtectedZones spotId={spot.id} />
 
           <SpotRegulations regulations={spot.regulations} />
         </div>
@@ -117,21 +162,21 @@ export function SpotDetail({ spot }: SpotDetailProps) {
           <SpotWeather spotId={spot.id} />
           <SpotWaterLevel spotId={spot.id} />
           <SpotFishIndex spotId={spot.id} />
+          <SpotSolunar spotId={spot.id} />
 
           <div className="p-4 rounded-lg border">
             <h3 className="font-semibold text-sm mb-2">Coordonnées</h3>
             <p className="text-sm text-muted-foreground font-mono">
               {spot.latitude.toFixed(6)}, {spot.longitude.toFixed(6)}
             </p>
-            <Button variant="outline" size="sm" className="w-full mt-2" asChild>
-              <a
-                href={`https://www.google.com/maps/dir/?api=1&destination=${spot.latitude},${spot.longitude}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Navigation className="h-4 w-4 mr-1" /> Itinéraire
-              </a>
-            </Button>
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${spot.latitude},${spot.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3 w-full mt-2"
+            >
+              <Navigation className="h-4 w-4 mr-1" /> Itinéraire
+            </a>
           </div>
 
           {spot.dataOrigin !== 'USER' ? (

@@ -26,5 +26,6 @@ export const catchFiltersSchema = z.object({
 });
 
 export type CreateCatchInput = z.infer<typeof createCatchSchema>;
+export type CreateCatchFormInput = z.input<typeof createCatchSchema>;
 export type UpdateCatchInput = z.infer<typeof updateCatchSchema>;
 export type CatchFiltersInput = z.infer<typeof catchFiltersSchema>;

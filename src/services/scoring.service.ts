@@ -7,6 +7,12 @@ import { getFlowStatusForCoords, getFlowScoreImpact } from './hubeau-ecoulement.
 import type { FlowStatus } from './hubeau-ecoulement.service';
 import { findTronconForStation, getVigilanceScoreImpact } from './vigicrues.service';
 import { fetchIPRForStation, iprToStaticScoreBonus } from './hubeau-ipr.service';
+import { fetchDroughtRestriction, getDroughtScoreImpact } from './vigieau.service';
+import { fetchPressureDelta, getPressureDeltaScoreImpact } from './open-meteo-historical.service';
+import { computeSolunarData } from './solunar.service';
+import { fetchPiezoLevel } from './hubeau-piezometrie.service';
+import { ibgnToStaticScoreBonus } from './hubeau-hydrobio.service';
+import { fetchFloodForecast, getFloodScoreImpact } from './open-meteo-flood.service';
 import SunCalc from 'suncalc';
 
 /**
@@ -289,7 +295,22 @@ export async function computeStaticScore(spotId: string): Promise<number> {
     }
   }
 
-  // 8. Regulation penalty (#1) — active bans cap/penalize the score
+  // 8. IBGN biological index (bonus/penalty like IPR)
+  let ibgnBonus = 0;
+  try {
+    const bioIndices = await prisma.biologicalIndex.findMany({
+      where: { spotId, indexType: 'IBGN' },
+      orderBy: { measurementDate: 'desc' },
+      take: 1,
+    });
+    if (bioIndices.length > 0) {
+      ibgnBonus = ibgnToStaticScoreBonus(bioIndices[0].qualityClass);
+    }
+  } catch {
+    // Non-critical
+  }
+
+  // 9. Regulation penalty (#1) — active bans cap/penalize the score
   let regulationPenalty = 0;
   try {
     const activeRegs = await prisma.spotRegulation.findMany({
@@ -319,6 +340,7 @@ export async function computeStaticScore(spotId: string): Promise<number> {
     0.05 * ratingScore +
     0.05 * fishDensityScore +
     iprBonus +
+    ibgnBonus +
     regulationPenalty,
   );
 
@@ -333,26 +355,37 @@ export async function computeDynamicScore(
   spotId: string,
   lat: number,
   lon: number,
-  weatherData?: { pressure: number; windSpeed: number; cloudCover: number; temperature: number },
+  weatherData?: { pressure: number; windSpeed: number; cloudCover: number; temperature: number; uvIndex?: number; precipitation?: number; precipitationProbability?: number },
   waterLevelTrend?: 'rising' | 'stable' | 'falling',
   waterTemperature?: number,
 ): Promise<number> {
   const now = new Date();
-  const moonIllumination = SunCalc.getMoonIllumination(now);
-  const moonPhaseValue = moonIllumination.phase;
 
-  // Map moon phase number to string
+  // Use solunar data instead of simple moon phase
+  const solunar = computeSolunarData(now, lat, lon);
+  const moonPhaseValue = solunar.moonPhase;
   let moonPhase = 'other';
   if (moonPhaseValue < 0.05 || moonPhaseValue > 0.95) moonPhase = 'new';
   else if (moonPhaseValue > 0.45 && moonPhaseValue < 0.55) moonPhase = 'full';
 
-  // Determine pressure trend from weather code (simplified)
+  // Use real 48h pressure delta instead of weather code guess
   let pressureTrend: 'rising' | 'stable' | 'falling' = 'stable';
-  if (weatherData) {
-    const code = (weatherData as { weatherCode?: number }).weatherCode;
-    if (code !== undefined) {
-      if (code >= 51 && code <= 82) pressureTrend = 'falling';
-      else if (code <= 3) pressureTrend = 'rising';
+  let pressureDeltaBonus = 0;
+  try {
+    const delta = await fetchPressureDelta(lat, lon);
+    if (delta) {
+      pressureDeltaBonus = getPressureDeltaScoreImpact(delta.trend);
+      if (delta.delta < -2) pressureTrend = 'falling';
+      else if (delta.delta > 2) pressureTrend = 'rising';
+    }
+  } catch {
+    // Fallback to weather code
+    if (weatherData) {
+      const code = (weatherData as { weatherCode?: number }).weatherCode;
+      if (code !== undefined) {
+        if (code >= 51 && code <= 82) pressureTrend = 'falling';
+        else if (code <= 3) pressureTrend = 'rising';
+      }
     }
   }
 
@@ -370,8 +403,33 @@ export async function computeDynamicScore(
 
   let score = calculateFishActivityIndex(input).score;
 
+  // Apply 48h pressure delta bonus (replaces the simplistic pressure trend scoring)
+  score += pressureDeltaBonus;
+
+  // Solunar period bonus (replaces simple moon phase ±10)
+  score += solunar.scoreImpact;
+
+  // UV index impact (±5 points)
+  if (weatherData?.uvIndex !== undefined) {
+    if (weatherData.uvIndex < 3) score += 5;
+    else if (weatherData.uvIndex > 6) score -= 5;
+  }
+
+  // Precipitation impact (±8 points)
+  if (weatherData?.precipitation !== undefined) {
+    if (weatherData.precipitation >= 0.1 && weatherData.precipitation <= 2) score += 8;
+    else if (weatherData.precipitation > 5) score -= 5;
+  }
+
+  // VigiEau drought restrictions (go/no-go)
+  try {
+    const drought = await fetchDroughtRestriction(lat, lon);
+    if (drought) score += getDroughtScoreImpact(drought.level);
+  } catch {
+    // Non-critical
+  }
+
   // Water temperature bonus/penalty (±10 points)
-  // Use species-specific optimal ranges when available, else generic range
   if (waterTemperature !== undefined) {
     try {
       const speciesTempScore = await computeSpeciesTemperatureScore(spotId, waterTemperature);
@@ -389,7 +447,10 @@ export async function computeDynamicScore(
     }
   }
 
-  // Flow status from ONDE network — species-aware (#5)
+  // Piezometric level (informational — shown in factors but no direct scoring)
+  // Handled in score/route.ts for display only
+
+  // Flow status from ONDE network — species-aware
   try {
     const flow = await getFlowStatusForCoords(lat, lon);
     if (flow) score += await getSpeciesAwareFlowImpact(spotId, flow.status);
@@ -397,7 +458,7 @@ export async function computeDynamicScore(
     // Non-critical
   }
 
-  // Spawn season bonus (#3) — fish more active during spawning
+  // Spawn season bonus — fish more active during spawning
   try {
     const currentMonth = now.getMonth() + 1;
     score += await computeSpawnSeasonBonus(spotId, currentMonth);
@@ -415,6 +476,14 @@ export async function computeDynamicScore(
     } catch {
       // Non-critical
     }
+  }
+
+  // GloFAS flood forecast (7-day river discharge)
+  try {
+    const flood = await fetchFloodForecast(lat, lon);
+    if (flood) score += getFloodScoreImpact(flood.riskLevel);
+  } catch {
+    // Non-critical
   }
 
   return Math.max(0, Math.min(100, score));
@@ -450,6 +519,7 @@ export async function refreshDynamicScores(options?: {
       staticScore: true,
       hydroStationCode: true,
       tempStationCode: true,
+      piezoStationCode: true,
     },
   });
 

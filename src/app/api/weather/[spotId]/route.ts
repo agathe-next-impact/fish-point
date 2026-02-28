@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCached } from '@/lib/redis';
 import { fetchWeatherByCoords } from '@/services/weather.service';
+import { fetchAirQualityData } from '@/services/open-meteo-airquality.service';
 
 export async function GET(
   request: NextRequest,
@@ -30,7 +31,15 @@ export async function GET(
       600,
     );
 
-    return NextResponse.json({ data: weather });
+    // Fetch air quality / pollen data (non-critical)
+    let pollen = null;
+    try {
+      pollen = await fetchAirQualityData(spot.latitude, spot.longitude);
+    } catch {
+      // Non-critical
+    }
+
+    return NextResponse.json({ data: { ...weather, pollen } });
   } catch (error) {
     console.error('GET weather error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

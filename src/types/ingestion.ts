@@ -80,6 +80,12 @@ export interface OpenMeteoCurrentWeather {
   windSpeed: number;
   cloudCover: number;
   weatherCode: number;
+  uvIndex: number;
+  precipitationProbability: number;
+  precipitation: number;
+  soilTemperature: number;
+  soilMoisture: number;
+  directRadiation: number;
 }
 
 export interface OpenMeteoRawResponse {
@@ -90,6 +96,12 @@ export interface OpenMeteoRawResponse {
     wind_speed_10m: number;
     cloud_cover: number;
     weather_code: number;
+    uv_index: number;
+    precipitation_probability: number;
+    precipitation: number;
+    soil_temperature_0_to_7cm: number;
+    soil_moisture_0_to_7cm: number;
+    direct_radiation: number;
   };
 }
 
@@ -137,5 +149,24 @@ export interface SpotScore {
     impact: 'positive' | 'neutral' | 'negative';
     description: string;
   }>;
+  weather?: {
+    temperature: number;
+    pressure: number;
+    windSpeed: number;
+    cloudCover: number;
+    uvIndex?: number;
+    precipitation?: number;
+    precipitationProbability?: number;
+  };
+  solunar?: {
+    moonPhaseName: string;
+    currentActivity: 'major' | 'minor' | 'none';
+    periods: Array<{
+      type: 'major' | 'minor';
+      label: string;
+      start: string;
+      end: string;
+    }>;
+  };
   scoreUpdatedAt: string;
 }

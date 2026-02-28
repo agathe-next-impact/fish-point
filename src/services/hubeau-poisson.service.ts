@@ -106,3 +106,73 @@ export async function fetchAllObservationsForStation(
 
   return allObs;
 }
+
+/**
+ * Fetch detailed individual data from Hub'Eau Aspe (listes endpoint).
+ * Returns average weight and length per species for a station.
+ */
+export async function fetchAspeDetailedObservations(
+  stationCode: string,
+): Promise<Array<{
+  speciesCode: string;
+  speciesName: string;
+  averageWeight: number | null;
+  averageLength: number | null;
+}>> {
+  const searchParams = new URLSearchParams({
+    code_station: stationCode,
+    size: '1000',
+    fields: 'code_alternatif_taxon,nom_commun_taxon,taille_individu_min,taille_individu_max,poids_individu',
+  });
+
+  try {
+    const res = await fetch(`${HUBEAU_BASE}/listes?${searchParams}`);
+    if (!res.ok && res.status !== 206) return [];
+
+    const body = await res.json();
+    const data = body.data ?? [];
+
+    // Aggregate by species
+    const speciesMap = new Map<string, {
+      name: string;
+      weights: number[];
+      lengths: number[];
+    }>();
+
+    for (const item of data) {
+      const code = item.code_alternatif_taxon as string | undefined;
+      if (!code) continue;
+
+      let existing = speciesMap.get(code);
+      if (!existing) {
+        existing = { name: (item.nom_commun_taxon as string) ?? code, weights: [], lengths: [] };
+      }
+
+      const weight = item.poids_individu as number | undefined;
+      const sizeMin = item.taille_individu_min as number | undefined;
+      const sizeMax = item.taille_individu_max as number | undefined;
+
+      if (weight) existing.weights.push(weight);
+      if (sizeMin && sizeMax) {
+        existing.lengths.push((sizeMin + sizeMax) / 2);
+      } else if (sizeMin) {
+        existing.lengths.push(sizeMin);
+      }
+
+      speciesMap.set(code, existing);
+    }
+
+    return Array.from(speciesMap.entries()).map(([code, sp]) => ({
+      speciesCode: code,
+      speciesName: sp.name,
+      averageWeight: sp.weights.length > 0
+        ? Math.round(sp.weights.reduce((a, b) => a + b, 0) / sp.weights.length * 10) / 10
+        : null,
+      averageLength: sp.lengths.length > 0
+        ? Math.round(sp.lengths.reduce((a, b) => a + b, 0) / sp.lengths.length * 10) / 10
+        : null,
+    }));
+  } catch {
+    return [];
+  }
+}

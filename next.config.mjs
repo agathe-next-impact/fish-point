@@ -14,6 +14,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'avatars.githubusercontent.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'data.geopf.fr',
+      },
+      {
+        protocol: 'https',
+        hostname: 'upload.wikimedia.org',
+      },
     ],
   },
   experimental: {
