@@ -1,6 +1,6 @@
-import type { WaterType, WaterCategory, FishingType, SpotStatus, Abundance } from '@prisma/client';
+import type { WaterType, WaterCategory, FishingType, SpotStatus, Abundance, AccessType } from '@prisma/client';
 
-export type { WaterType, WaterCategory, FishingType, SpotStatus, Abundance };
+export type { WaterType, WaterCategory, FishingType, SpotStatus, Abundance, AccessType };
 
 export interface SpotAccessibility {
   pmr: boolean;
@@ -28,11 +28,25 @@ export interface SpotListItem {
   distance?: number;
   fishabilityScore: number | null;
   dataOrigin: string;
+  accessType: AccessType | null;
+}
+
+export interface AccessDetails {
+  signals: Array<{
+    source: string;
+    signal: string;
+    accessType: string;
+    confidence: 'high' | 'medium' | 'low';
+    details?: string;
+  }>;
+  confidence: number;
+  lastCheckedAt: string;
 }
 
 export interface SpotDetail extends SpotListItem {
   description: string | null;
   accessibility: SpotAccessibility | null;
+  accessDetails: AccessDetails | null;
   status: SpotStatus;
   viewCount: number;
   createdAt: string;

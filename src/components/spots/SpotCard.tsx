@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { WATER_TYPE_LABELS } from '@/lib/constants';
 import { formatDistance } from '@/lib/mapbox';
+import { SpotAccessBadge } from './SpotAccessBadge';
 import type { SpotListItem } from '@/types/spot';
 
 function getFishabilityColor(score: number): string {
@@ -67,6 +68,7 @@ export function SpotCard({ spot }: SpotCardProps) {
               <Badge variant="secondary" className="text-xs">
                 {WATER_TYPE_LABELS[spot.waterType] || spot.waterType}
               </Badge>
+              <SpotAccessBadge accessType={spot.accessType} size="sm" />
               {spot.averageRating > 0 && (
                 <span className="flex items-center gap-0.5 text-sm">
                   <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />

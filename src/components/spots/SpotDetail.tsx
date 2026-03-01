@@ -3,8 +3,9 @@
 import { Star, MapPin, Check, Share2, Heart, Navigation, Eye, Database, Accessibility, ParkingCircle, Ship, Moon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { WATER_TYPE_LABELS, FISHING_TYPE_LABELS, ABUNDANCE_LABELS } from '@/lib/constants';
+import { WATER_TYPE_LABELS, FISHING_TYPE_LABELS, ABUNDANCE_LABELS, ACCESS_TYPE_LABELS } from '@/lib/constants';
 import { formatDate } from '@/lib/utils';
+import { SpotAccessBadge } from './SpotAccessBadge';
 import { SpotRegulations } from './SpotRegulations';
 import { SpotWeather } from './SpotWeather';
 import { SpotWaterLevel } from './SpotWaterLevel';
@@ -85,6 +86,14 @@ export function SpotDetail({ spot }: SpotDetailProps) {
                 <div>
                   <p className="text-sm text-muted-foreground">Catégorie</p>
                   <p className="font-medium">{spot.waterCategory === 'FIRST' ? '1ère catégorie' : '2ème catégorie'}</p>
+                </div>
+              )}
+              {spot.accessType && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Accès</p>
+                  <div className="mt-1">
+                    <SpotAccessBadge accessType={spot.accessType} />
+                  </div>
                 </div>
               )}
             </div>

@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Star, MapPin } from 'lucide-react-native';
 import { colors, borderRadius, spacing, typography } from '@/theme';
 import { Badge } from '@/components/ui/Badge';
+import { SpotAccessBadge } from '@/components/spots/SpotAccessBadge';
 import { formatRating, formatDistance, labelForWaterType } from '@/utils/format';
 
 // ---------------------------------------------------------------------------
@@ -16,6 +17,7 @@ interface SpotCardProps {
   name: string;
   imageUrl?: string | null;
   waterType?: string;
+  accessType?: string | null;
   rating?: number | null;
   reviewCount?: number;
   distance?: number | null;
@@ -33,6 +35,7 @@ export function SpotCard({
   name,
   imageUrl,
   waterType,
+  accessType,
   rating,
   reviewCount = 0,
   distance,
@@ -77,9 +80,12 @@ export function SpotCard({
           <Text style={styles.name} numberOfLines={1}>
             {name}
           </Text>
-          {waterType ? (
-            <Badge label={labelForWaterType(waterType)} variant="primary" />
-          ) : null}
+          <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+            {waterType ? (
+              <Badge label={labelForWaterType(waterType)} variant="primary" />
+            ) : null}
+            <SpotAccessBadge accessType={accessType} />
+          </View>
         </View>
 
         {/* Location */}

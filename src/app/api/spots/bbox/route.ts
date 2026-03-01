@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
       primaryImage: spot.images[0]?.url || null,
       fishabilityScore: spot.fishabilityScore,
       dataOrigin: spot.dataOrigin,
+      accessType: spot.accessType,
     }));
 
     return NextResponse.json({ data });

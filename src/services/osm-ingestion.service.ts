@@ -18,7 +18,7 @@ function inferWaterTypeFromTags(tags: Record<string, string>): WaterType {
 
   if (water === 'lake' || (natural === 'water' && !water)) return 'LAKE';
   if (water === 'pond' || water === 'basin') return 'POND';
-  if (water === 'reservoir' || landuse === 'reservoir') return 'RESERVOIR';
+  if (water === 'reservoir' || landuse === 'reservoir') return 'LAKE';
   if (water === 'river' || water === 'canal') return 'CANAL';
   if (natural === 'coastline' || water === 'sea') return 'SEA';
 
@@ -44,8 +44,6 @@ function inferFishingTypes(waterType: WaterType): FishingType[] {
       return ['SPINNING', 'BOAT', 'SHORE'];
     case 'POND':
       return ['COARSE', 'SHORE'];
-    case 'RESERVOIR':
-      return ['SPINNING', 'BOAT', 'SHORE'];
     case 'STREAM':
       return ['FLY', 'SPINNING'];
     case 'CANAL':
@@ -118,11 +116,6 @@ const FAUNA_BY_WATER: Record<string, { poissons: string[]; insectes: string[]; p
     insectes: ['Libellule', 'Demoiselle', 'Notonecte', 'Dytique'],
     predateurs: ['Héron cendré', 'Bihoreau gris', 'Grèbe castagneux'],
   },
-  RESERVOIR: {
-    poissons: ['Brochet', 'Sandre', 'Perche', 'Carpe commune', 'Black bass'],
-    insectes: ['Libellule', 'Éphémère', 'Chironome'],
-    predateurs: ['Héron cendré', 'Grand cormoran', 'Balbuzard pêcheur'],
-  },
   STREAM: {
     poissons: ['Truite fario', 'Vairon', 'Chabot', 'Goujon', 'Loche franche'],
     insectes: ['Éphémère', 'Phrygane (porte-bois)', 'Perle (plécoptère)', 'Simulie'],
@@ -147,7 +140,7 @@ function buildDescription(element: OverpassElement, waterType: string): string {
   if (tags.name) parts.push(tags.name);
 
   const typeLabels: Record<string, string> = {
-    LAKE: 'Lac', POND: 'Étang', RESERVOIR: 'Réservoir',
+    LAKE: 'Lac', POND: 'Étang',
     RIVER: 'Rivière', STREAM: 'Ruisseau', CANAL: 'Canal', SEA: 'Mer',
   };
   parts.push(`Type : ${typeLabels[waterType] || waterType}`);

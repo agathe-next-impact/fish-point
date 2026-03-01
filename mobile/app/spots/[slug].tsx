@@ -26,6 +26,7 @@ import { Card } from '@/components/ui/Card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { SpotWeather } from '@/components/spots/SpotWeather';
 import { SpotSpecies } from '@/components/spots/SpotSpecies';
+import { SpotAccessBadge } from '@/components/spots/SpotAccessBadge';
 import { useSpot } from '@/hooks';
 import {
   formatRating,
@@ -140,6 +141,7 @@ export default function SpotDetailScreen() {
                   variant="neutral"
                 />
               )}
+              <SpotAccessBadge accessType={(spot as any).accessType} />
             </View>
 
             {/* Rating */}

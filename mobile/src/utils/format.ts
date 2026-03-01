@@ -206,7 +206,6 @@ const WATER_TYPE_LABELS: Record<string, string> = {
   POND: 'Etang',
   SEA: 'Mer',
   CANAL: 'Canal',
-  RESERVOIR: 'Reservoir',
   STREAM: 'Ruisseau',
 };
 

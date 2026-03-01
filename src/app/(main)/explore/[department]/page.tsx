@@ -38,7 +38,7 @@ export default async function DepartmentPage({ params }: DepartmentPageProps) {
     fishingTypes: s.fishingTypes, averageRating: s.averageRating,
     reviewCount: s.reviewCount, isPremium: s.isPremium,
     isVerified: s.isVerified, primaryImage: s.images[0]?.url || null,
-    fishabilityScore: s.fishabilityScore, dataOrigin: s.dataOrigin,
+    fishabilityScore: s.fishabilityScore, dataOrigin: s.dataOrigin, accessType: s.accessType,
   }));
 
   return (

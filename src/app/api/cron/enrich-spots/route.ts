@@ -142,6 +142,51 @@ export async function GET(request: NextRequest) {
       results.validation = validationResult;
     }
 
+    // Step 7: Detect access type for approved spots without one
+    if (step === 'all' || step === 'access') {
+      const { detectAccessType } = await import('@/services/access-detection.service');
+
+      const spotsWithoutAccess = await prisma.spot.findMany({
+        where: {
+          accessType: null,
+          status: 'APPROVED',
+          ...(departement ? { department: departement } : {}),
+        },
+        select: { id: true, latitude: true, longitude: true, osmTags: true, confidenceDetails: true },
+        take: 200,
+      });
+
+      let accessDetected = 0;
+      for (const spot of spotsWithoutAccess) {
+        try {
+          const result = await detectAccessType({
+            latitude: spot.latitude,
+            longitude: spot.longitude,
+            osmTags: spot.osmTags as Record<string, string> | null,
+            confidenceDetails: spot.confidenceDetails as { signals?: Array<{ source: string; signal: string }> } | null,
+          });
+
+          if (result.accessType) {
+            await prisma.spot.update({
+              where: { id: spot.id },
+              data: {
+                accessType: result.accessType,
+                accessDetails: JSON.parse(JSON.stringify({
+                  signals: result.signals,
+                  confidence: result.confidence,
+                  lastCheckedAt: new Date().toISOString(),
+                })),
+              },
+            });
+            accessDetected++;
+          }
+        } catch {
+          // Non-critical
+        }
+      }
+      results.access = { processed: spotsWithoutAccess.length, detected: accessDetected };
+    }
+
     return NextResponse.json({ success: true, results });
   } catch (error) {
     console.error('Enrich spots cron error:', error);

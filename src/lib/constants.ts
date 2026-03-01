@@ -37,7 +37,6 @@ export const WATER_TYPE_LABELS: Record<string, string> = {
   POND: 'Étang',
   SEA: 'Mer',
   CANAL: 'Canal',
-  RESERVOIR: 'Réservoir',
   STREAM: 'Ruisseau',
 };
 
@@ -69,6 +68,16 @@ export const ABUNDANCE_LABELS: Record<string, string> = {
   MODERATE: 'Modéré',
   HIGH: 'Élevé',
   VERY_HIGH: 'Très élevé',
+};
+
+export const ACCESS_TYPE_LABELS: Record<string, string> = {
+  FREE: 'Libre',
+  FISHING_CARD: 'Carte de pêche',
+  AAPPMA_SPECIFIC: 'AAPPMA spécifique',
+  PAID: 'Payant',
+  MEMBERS_ONLY: 'Membres uniquement',
+  RESTRICTED: 'Restreint',
+  PRIVATE: 'Privé',
 };
 
 export const REGULATION_TYPE_LABELS: Record<string, string> = {

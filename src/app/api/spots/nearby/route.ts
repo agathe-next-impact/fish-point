@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
         s.id, s.slug, s.name, s.latitude, s.longitude,
         s.department, s.commune, s."waterType", s."waterCategory",
         s."fishingTypes", s."averageRating", s."reviewCount",
-        s."isPremium", s."isVerified", s."fishabilityScore", s."dataOrigin",
+        s."isPremium", s."isVerified", s."fishabilityScore", s."dataOrigin", s."accessType",
         ST_Distance(
           s.geometry,
           ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography

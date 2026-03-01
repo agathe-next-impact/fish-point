@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { findWaterBody, isFishingFriendlyNature, isNegativeNature } from './bdtopo.service';
 import { findNearbyICPE } from './georisques.service';
 import { checkAgriculturalParcel } from './rpg.service';
+import { detectAccessType } from './access-detection.service';
 import type { ValidationSignal, ValidationResult } from '@/types/ingestion';
 
 /**
@@ -224,7 +225,7 @@ export async function validateSpotsBatch(options?: {
 
   const spots = await prisma.spot.findMany({
     where: whereClause,
-    select: { id: true },
+    select: { id: true, latitude: true, longitude: true, osmTags: true, confidenceDetails: true },
     take: batchSize,
     orderBy: { createdAt: 'asc' },
   });
@@ -233,10 +234,24 @@ export async function validateSpotsBatch(options?: {
     try {
       const result = await computeConfidenceScore(spot.id);
 
+      // Detect access type
+      const accessResult = await detectAccessType({
+        latitude: spot.latitude,
+        longitude: spot.longitude,
+        osmTags: spot.osmTags as Record<string, string> | null,
+        confidenceDetails: spot.confidenceDetails as { signals?: Array<{ source: string; signal: string }> } | null,
+      });
+
       const updateData: Record<string, unknown> = {
         confidenceScore: result.confidenceScore,
         confidenceDetails: { signals: result.signals },
         validatedAt: new Date(),
+        accessType: accessResult.accessType,
+        accessDetails: accessResult.accessType ? JSON.parse(JSON.stringify({
+          signals: accessResult.signals,
+          confidence: accessResult.confidence,
+          lastCheckedAt: new Date().toISOString(),
+        })) : undefined,
       };
 
       if (options?.autoDecide) {

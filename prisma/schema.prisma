@@ -145,6 +145,10 @@ model Spot {
   biologicalIndices   BiologicalIndex[]
   alertSubscriptions  AlertSubscription[]
 
+  // Access type detection
+  accessType         AccessType?
+  accessDetails      Json?
+
   @@index([department])
   @@index([waterType])
   @@index([status])
@@ -152,6 +156,7 @@ model Spot {
   @@index([fishabilityScore(sort: Desc)])
   @@index([dataOrigin])
   @@index([confidenceScore])
+  @@index([accessType])
   @@map("spots")
 }
 
@@ -333,7 +338,6 @@ enum WaterType {
   POND
   SEA
   CANAL
-  RESERVOIR
   STREAM
 }
 
@@ -411,6 +415,16 @@ enum NotificationType {
   GROUP_TRIP
   SHARED_CATCH_LIKE
   SHARED_CATCH_COMMENT
+}
+
+enum AccessType {
+  FREE
+  FISHING_CARD
+  AAPPMA_SPECIFIC
+  PAID
+  MEMBERS_ONLY
+  RESTRICTED
+  PRIVATE
 }
 
 enum DataOrigin {

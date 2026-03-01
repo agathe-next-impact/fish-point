@@ -6,7 +6,6 @@ export const WaterType = {
   POND: 'POND',
   SEA: 'SEA',
   CANAL: 'CANAL',
-  RESERVOIR: 'RESERVOIR',
   STREAM: 'STREAM',
 } as const;
 export type WaterType = (typeof WaterType)[keyof typeof WaterType];
@@ -75,6 +74,17 @@ export const AlertType = {
 } as const;
 export type AlertType = (typeof AlertType)[keyof typeof AlertType];
 
+export const AccessType = {
+  FREE: 'FREE',
+  FISHING_CARD: 'FISHING_CARD',
+  AAPPMA_SPECIFIC: 'AAPPMA_SPECIFIC',
+  PAID: 'PAID',
+  MEMBERS_ONLY: 'MEMBERS_ONLY',
+  RESTRICTED: 'RESTRICTED',
+  PRIVATE: 'PRIVATE',
+} as const;
+export type AccessType = (typeof AccessType)[keyof typeof AccessType];
+
 // Labels francais
 export const WATER_TYPE_LABELS: Record<WaterType, string> = {
   RIVER: 'Riviere',
@@ -82,7 +92,6 @@ export const WATER_TYPE_LABELS: Record<WaterType, string> = {
   POND: 'Etang',
   SEA: 'Mer',
   CANAL: 'Canal',
-  RESERVOIR: 'Reservoir',
   STREAM: 'Ruisseau',
 };
 
@@ -121,4 +130,14 @@ export const ALERT_TYPE_LABELS: Record<AlertType, string> = {
   REGULATION_REMINDER: 'Rappel reglementaire',
   WATER_LEVEL_ABNORMAL: "Niveau d'eau anormal",
   CUSTOM_SPOT_ACTIVITY: 'Activite sur un spot',
+};
+
+export const ACCESS_TYPE_LABELS: Record<AccessType, string> = {
+  FREE: 'Libre',
+  FISHING_CARD: 'Carte de peche',
+  AAPPMA_SPECIFIC: 'AAPPMA specifique',
+  PAID: 'Payant',
+  MEMBERS_ONLY: 'Membres uniquement',
+  RESTRICTED: 'Restreint',
+  PRIVATE: 'Prive',
 };

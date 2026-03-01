@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const WaterTypeEnum = z.enum([
-  'RIVER', 'LAKE', 'POND', 'SEA', 'CANAL', 'RESERVOIR', 'STREAM',
+  'RIVER', 'LAKE', 'POND', 'SEA', 'CANAL', 'STREAM',
 ]);
 
 export const WaterCategoryEnum = z.enum(['FIRST', 'SECOND']);
