@@ -41,6 +41,26 @@ export async function reverseGeocode(lat: number, lng: number): Promise<Geocodin
   }
 }
 
+/**
+ * Resolve department code + commune from coordinates using the French gov API (free, no key needed).
+ */
+export async function resolveDepartment(lat: number, lng: number): Promise<{ departmentCode: string; commune: string } | null> {
+  try {
+    const res = await fetch(
+      `https://geo.api.gouv.fr/communes?lat=${lat}&lon=${lng}&fields=codeDepartement,nom&limit=1`,
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) return null;
+    return {
+      departmentCode: data[0].codeDepartement,
+      commune: data[0].nom,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function geocode(query: string): Promise<GeocodingResult[]> {
   if (!MAPBOX_TOKEN) return [];
 

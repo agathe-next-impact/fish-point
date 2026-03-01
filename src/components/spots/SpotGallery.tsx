@@ -9,7 +9,6 @@ import type { SpotImageData } from '@/types/spot';
 
 const SOURCE_LABELS: Record<string, string> = {
   ign: 'Vue aérienne · IGN',
-  wikimedia: 'Wikimedia Commons',
 };
 
 // Tiny transparent blurred placeholder (10x10 gray)
@@ -73,7 +72,17 @@ export function SpotGallery({ images, spotName, spotId }: SpotGalleryProps) {
 
       {sourceLabel && (
         <span className="absolute bottom-3 right-3 bg-black/50 text-white text-[10px] px-2 py-1 rounded backdrop-blur-sm z-10">
-          {sourceLabel}
+          {current.photographerName ? (
+            <a
+              href={current.photographerUrl || '#'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline"
+            >
+              {current.photographerName}
+            </a>
+          ) : null}
+          {current.photographerName ? ' · ' : ''}{sourceLabel}
         </span>
       )}
 

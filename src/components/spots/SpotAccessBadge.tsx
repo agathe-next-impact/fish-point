@@ -18,10 +18,9 @@ interface SpotAccessBadgeProps {
 }
 
 export function SpotAccessBadge({ accessType, size = 'default' }: SpotAccessBadgeProps) {
-  if (!accessType) return null;
-
-  const label = ACCESS_TYPE_LABELS[accessType] || accessType;
-  const colorClass = ACCESS_COLORS[accessType] || '';
+  const effective = accessType || 'FREE';
+  const label = ACCESS_TYPE_LABELS[effective] || effective;
+  const colorClass = ACCESS_COLORS[effective] || '';
 
   return (
     <Badge

@@ -47,10 +47,18 @@ export const updateSpotSchema = createSpotSchema.partial().extend({
   status: SpotStatusEnum.optional(),
 });
 
+export const FishCategoryEnum = z.enum([
+  'CARNIVORE', 'SALMONID', 'CYPRINID', 'CATFISH', 'MARINE', 'CRUSTACEAN', 'OTHER',
+]);
+
 export const spotFiltersSchema = z.object({
   waterType: z.array(WaterTypeEnum).optional(),
+  waterCategory: WaterCategoryEnum.optional(),
   fishingTypes: z.array(FishingTypeEnum).optional(),
+  fishCategory: z.array(FishCategoryEnum).optional(),
   minRating: z.number().min(0).max(5).optional(),
+  minFishabilityScore: z.number().min(0).max(100).optional(),
+  maxFishabilityScore: z.number().min(0).max(100).optional(),
   pmr: z.boolean().optional(),
   nightFishing: z.boolean().optional(),
   isPremium: z.boolean().optional(),

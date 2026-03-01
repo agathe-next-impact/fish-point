@@ -23,7 +23,7 @@ export default async function RegulationDepartmentPage({ params }: RegulationDep
   return (
     <div className="container mx-auto px-4 py-6">
       <h1 className="text-2xl font-bold mb-2">Réglementation - {dept.name} ({dept.code})</h1>
-      <p className="text-muted-foreground mb-6">{dept.federation}</p>
+      <p className="text-muted-foreground mb-6">{dept.region}</p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <SeasonCalendar title="1ère catégorie" openMonths={[3, 4, 5, 6, 7, 8, 9]} />

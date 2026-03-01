@@ -40,6 +40,11 @@ export const WATER_TYPE_LABELS: Record<string, string> = {
   STREAM: 'Ruisseau',
 };
 
+export const WATER_CATEGORY_LABELS: Record<string, string> = {
+  FIRST: '1ère catégorie',
+  SECOND: '2ème catégorie',
+};
+
 export const FISHING_TYPE_LABELS: Record<string, string> = {
   SPINNING: 'Lancer',
   FLY: 'Mouche',

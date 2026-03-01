@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCached } from '@/lib/redis';
 import { getOrthoPhotoUrl } from '@/services/ign-ortho.service';
-import { fetchWikimediaImages } from '@/services/wikimedia-images.service';
 import type { SpotImageData } from '@/types/spot';
 
 const VALIDATE_TIMEOUT_MS = 5000;
@@ -67,14 +66,6 @@ export async function GET(
         isPrimary: false,
         source: 'ign',
       });
-
-      // Wikimedia Commons
-      try {
-        const wikiImages = await fetchWikimediaImages(spot.latitude, spot.longitude);
-        candidates.push(...wikiImages);
-      } catch {
-        // Non-critical
-      }
 
       // Validate all URLs in parallel via HEAD requests
       const results = await Promise.allSettled(

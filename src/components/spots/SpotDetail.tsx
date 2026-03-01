@@ -4,6 +4,7 @@ import { Star, MapPin, Check, Share2, Heart, Navigation, Eye, Database, Accessib
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { WATER_TYPE_LABELS, FISHING_TYPE_LABELS, ABUNDANCE_LABELS, ACCESS_TYPE_LABELS } from '@/lib/constants';
+import { getDepartmentName } from '@/config/departments';
 import { formatDate } from '@/lib/utils';
 import { SpotAccessBadge } from './SpotAccessBadge';
 import { SpotRegulations } from './SpotRegulations';
@@ -20,6 +21,7 @@ import { SpotBiodiversity } from './SpotBiodiversity';
 import { SpotSolunar } from './SpotSolunar';
 import { SpotDroughtBanner } from './SpotDroughtBanner';
 import { SpotProtectedZones } from './SpotProtectedZones';
+import { SpotGallery } from './SpotGallery';
 import type { SpotDetail as SpotDetailType } from '@/types/spot';
 
 interface SpotDetailProps {
@@ -32,6 +34,11 @@ export function SpotDetail({ spot }: SpotDetailProps) {
       {/* Drought restriction banner (go/no-go) */}
       <SpotDroughtBanner spotId={spot.id} />
 
+      {/* Image gallery (DB images + IGN/Wikimedia/Unsplash) */}
+      <div className="mb-6">
+        <SpotGallery images={spot.images} spotName={spot.name} spotId={spot.id} />
+      </div>
+
       {/* Title section */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div>
@@ -41,7 +48,7 @@ export function SpotDetail({ spot }: SpotDetailProps) {
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <MapPin className="h-4 w-4" />
-            <span>{spot.commune ? `${spot.commune}, ` : ''}Département {spot.department}</span>
+            <span>{spot.commune ? `${spot.commune}, ` : ''}{getDepartmentName(spot.department)} ({spot.department})</span>
           </div>
           <div className="flex items-center gap-3 mt-2">
             {spot.averageRating > 0 && (
@@ -88,14 +95,12 @@ export function SpotDetail({ spot }: SpotDetailProps) {
                   <p className="font-medium">{spot.waterCategory === 'FIRST' ? '1ère catégorie' : '2ème catégorie'}</p>
                 </div>
               )}
-              {spot.accessType && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Accès</p>
-                  <div className="mt-1">
-                    <SpotAccessBadge accessType={spot.accessType} />
-                  </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Accès</p>
+                <div className="mt-1">
+                  <SpotAccessBadge accessType={spot.accessType} />
                 </div>
-              )}
+              </div>
             </div>
             <div className="mt-3">
               <p className="text-sm text-muted-foreground mb-2">Techniques de pêche</p>

@@ -68,7 +68,9 @@ export interface SpotImageData {
   width: number | null;
   height: number | null;
   isPrimary: boolean;
-  source?: 'user' | 'ign' | 'wikimedia';
+  source?: 'user' | 'ign' | 'wikimedia' | 'unsplash';
+  photographerName?: string;
+  photographerUrl?: string;
 }
 
 export interface SpotSpeciesData {
@@ -101,8 +103,13 @@ export interface SpotRegulationData {
 
 export interface SpotFilters {
   waterType?: WaterType[];
+  waterCategory?: WaterCategory;
   fishingTypes?: FishingType[];
+  fishCategory?: string[];
+  accessType?: string;
   minRating?: number;
+  minFishabilityScore?: number;
+  maxFishabilityScore?: number;
   pmr?: boolean;
   nightFishing?: boolean;
   isPremium?: boolean;

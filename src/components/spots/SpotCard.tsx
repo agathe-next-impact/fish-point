@@ -4,7 +4,9 @@ import { Star, MapPin, Navigation } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { WATER_TYPE_LABELS } from '@/lib/constants';
+import { getDepartmentName } from '@/config/departments';
 import { formatDistance } from '@/lib/mapbox';
+import { getOrthoPhotoUrl } from '@/services/ign-ortho.service';
 import { SpotAccessBadge } from './SpotAccessBadge';
 import type { SpotListItem } from '@/types/spot';
 
@@ -21,23 +23,19 @@ interface SpotCardProps {
 }
 
 export function SpotCard({ spot }: SpotCardProps) {
+  const imageUrl = spot.primaryImage || getOrthoPhotoUrl(spot.latitude, spot.longitude, 600, 400);
+
   return (
     <Link href={`/spots/${spot.slug}`}>
       <Card className="overflow-hidden hover:shadow-md transition-shadow group">
         <div className="relative h-48 bg-muted">
-          {spot.primaryImage ? (
-            <Image
-              src={spot.primaryImage}
-              alt={spot.name}
-              fill
-              className="object-cover group-hover:scale-105 transition-transform duration-300"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <MapPin className="h-12 w-12 text-muted-foreground/30" />
-            </div>
-          )}
+          <Image
+            src={imageUrl}
+            alt={spot.name}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
           <div className="absolute top-2 right-2 flex gap-1">
             {spot.fishabilityScore != null && (
               <div
@@ -60,7 +58,7 @@ export function SpotCard({ spot }: SpotCardProps) {
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
             <MapPin className="h-3 w-3" />
             <span className="truncate">
-              {spot.commune ? `${spot.commune}, ` : ''}{spot.department}
+              {spot.commune ? `${spot.commune}, ` : ''}{getDepartmentName(spot.department)}
             </span>
           </div>
           <div className="flex items-center justify-between">

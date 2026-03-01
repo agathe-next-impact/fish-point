@@ -1,17 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { SpotCard } from '@/components/spots/SpotCard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SpotGridFilters, EMPTY_FILTERS, type GridFilters } from '@/components/spots/SpotGridFilters';
 import { useInfiniteSpots } from '@/hooks/useSpots';
 import { useDebounce } from '@/hooks/useDebounce';
+import type { WaterType, WaterCategory } from '@/types/spot';
 
 export default function SpotsPage() {
   const [search, setSearch] = useState('');
+  const [gridFilters, setGridFilters] = useState<GridFilters>(EMPTY_FILTERS);
   const debouncedSearch = useDebounce(search, 300);
+
+  const apiFilters = useMemo(() => ({
+    search: debouncedSearch || undefined,
+    department: gridFilters.department,
+    waterType: gridFilters.waterType.length > 0
+      ? (gridFilters.waterType as WaterType[])
+      : undefined,
+    waterCategory: gridFilters.waterCategory as WaterCategory | undefined,
+    fishCategory: gridFilters.fishCategory.length > 0
+      ? gridFilters.fishCategory
+      : undefined,
+    accessType: gridFilters.accessType,
+    minFishabilityScore: gridFilters.minFishabilityScore,
+    maxFishabilityScore: gridFilters.maxFishabilityScore,
+    limit: 500,
+  }), [debouncedSearch, gridFilters]);
 
   const {
     data,
@@ -19,10 +38,7 @@ export default function SpotsPage() {
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
-  } = useInfiniteSpots({
-    search: debouncedSearch || undefined,
-    limit: 500,
-  });
+  } = useInfiniteSpots(apiFilters);
 
   const allSpots = data?.pages.flatMap((page) => page.data) ?? [];
   const total = data?.pages[0]?.meta.total ?? 0;
@@ -42,6 +58,10 @@ export default function SpotsPage() {
             />
           </div>
         </div>
+      </div>
+
+      <div className="mb-6">
+        <SpotGridFilters filters={gridFilters} onChange={setGridFilters} />
       </div>
 
       {isLoading ? (

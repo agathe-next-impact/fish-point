@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { createSpotSchema, spotFiltersSchema } from '@/validators/spot.schema';
 import { slugify } from '@/lib/utils';
+import { resolveDepartment } from '@/services/geocoding.service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,9 +37,39 @@ export async function GET(request: NextRequest) {
       ];
     }
 
+    if (searchParams.get('accessType')) {
+      const at = searchParams.get('accessType');
+      if (at === 'FREE') {
+        // "Libre" includes spots with null accessType (default)
+        if (!where.AND) where.AND = [];
+        (where.AND as unknown[]).push({
+          OR: [{ accessType: 'FREE' }, { accessType: null }],
+        });
+      } else {
+        where.accessType = at;
+      }
+    }
+    if (searchParams.get('waterCategory')) {
+      where.waterCategory = searchParams.get('waterCategory');
+    }
+    if (searchParams.get('fishCategory')) {
+      where.species = {
+        some: { species: { category: { in: searchParams.getAll('fishCategory') } } },
+      };
+    }
+
     const minRating = parseFloat(searchParams.get('minRating') || '0');
     if (minRating > 0) {
       where.averageRating = { gte: minRating };
+    }
+
+    const minScore = parseFloat(searchParams.get('minFishabilityScore') || '0');
+    const maxScore = parseFloat(searchParams.get('maxFishabilityScore') || '0');
+    if (minScore > 0 || maxScore > 0) {
+      const scoreFilter: Record<string, number> = {};
+      if (minScore > 0) scoreFilter.gte = minScore;
+      if (maxScore > 0) scoreFilter.lte = maxScore;
+      where.fishabilityScore = scoreFilter;
     }
 
     const [spots, total] = await Promise.all([
@@ -104,6 +135,8 @@ export async function POST(request: NextRequest) {
     const data = validation.data;
     const slug = slugify(data.name) + '-' + Date.now().toString(36);
 
+    const geo = await resolveDepartment(data.latitude, data.longitude);
+
     const spot = await prisma.spot.create({
       data: {
         slug,
@@ -111,7 +144,8 @@ export async function POST(request: NextRequest) {
         description: data.description,
         latitude: data.latitude,
         longitude: data.longitude,
-        department: '',
+        department: geo?.departmentCode ?? '',
+        commune: geo?.commune ?? '',
         waterType: data.waterType,
         waterCategory: data.waterCategory,
         fishingTypes: data.fishingTypes,

@@ -142,6 +142,19 @@ export async function GET(request: NextRequest) {
       results.validation = validationResult;
     }
 
+    // Step 7b: Bulk-set remaining null accessType to FREE
+    if (step === 'access-bulk') {
+      const updated = await prisma.spot.updateMany({
+        where: {
+          accessType: null,
+          status: 'APPROVED',
+          ...(departement ? { department: departement } : {}),
+        },
+        data: { accessType: 'FREE' },
+      });
+      results.accessBulk = { updatedToFree: updated.count };
+    }
+
     // Step 7: Detect access type for approved spots without one
     if (step === 'all' || step === 'access') {
       const { detectAccessType } = await import('@/services/access-detection.service');
@@ -166,20 +179,20 @@ export async function GET(request: NextRequest) {
             confidenceDetails: spot.confidenceDetails as { signals?: Array<{ source: string; signal: string }> } | null,
           });
 
-          if (result.accessType) {
-            await prisma.spot.update({
-              where: { id: spot.id },
-              data: {
-                accessType: result.accessType,
-                accessDetails: JSON.parse(JSON.stringify({
-                  signals: result.signals,
-                  confidence: result.confidence,
-                  lastCheckedAt: new Date().toISOString(),
-                })),
-              },
-            });
-            accessDetected++;
-          }
+          // Default to FREE when no signal is found
+          const accessType = result.accessType ?? 'FREE';
+          await prisma.spot.update({
+            where: { id: spot.id },
+            data: {
+              accessType,
+              accessDetails: JSON.parse(JSON.stringify({
+                signals: result.signals,
+                confidence: result.confidence,
+                lastCheckedAt: new Date().toISOString(),
+              })),
+            },
+          });
+          accessDetected++;
         } catch {
           // Non-critical
         }
