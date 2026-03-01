@@ -56,6 +56,7 @@ export async function fetchNearbyObservations(
           per_page: '20',
           order_by: 'observed_on',
           order: 'desc',
+          locale: 'fr',
         });
 
         const res = await fetch(`${INATURALIST_BASE}/observations?${params}`, {

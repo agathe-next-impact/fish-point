@@ -131,6 +131,17 @@ export async function GET(request: NextRequest) {
       results.aspe = { processed: spotsWithExtId.length, enriched: aspeEnriched };
     }
 
+    // Step 6: Validate spot confidence (external API cross-checks)
+    if (step === 'all' || step === 'validation') {
+      const { validateSpotsBatch } = await import('@/services/spot-validation.service');
+      const validationResult = await validateSpotsBatch({
+        departement,
+        batchSize: 100,
+        autoDecide: true,
+      });
+      results.validation = validationResult;
+    }
+
     return NextResponse.json({ success: true, results });
   } catch (error) {
     console.error('Enrich spots cron error:', error);

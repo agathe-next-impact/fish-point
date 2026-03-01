@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { decode } from 'next-auth/jwt';
+
+const MOBILE_JWT_SALT = 'mobile-session-token';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Protected routes (auth required)
+  // Protected routes (auth required) - cookie-based for web app
   const protectedRoutes = ['/spots/new', '/catches', '/profile', '/my-spots', '/dashboard', '/alerts', '/community/groups'];
   if (protectedRoutes.some((route) => pathname.startsWith(route))) {
     // Check for session token cookie (authjs = NextAuth v5, next-auth = legacy fallback)
@@ -25,6 +28,49 @@ export async function middleware(request: NextRequest) {
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+  }
+
+  // Mobile Bearer token auth for protected API routes
+  // Skip /api/cron/ (handled above) and /api/auth/ (public endpoints)
+  if (
+    pathname.startsWith('/api/') &&
+    !pathname.startsWith('/api/cron/') &&
+    !pathname.startsWith('/api/auth/')
+  ) {
+    const authHeader = request.headers.get('authorization');
+
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      const secret = process.env.AUTH_SECRET;
+
+      if (secret) {
+        try {
+          const payload = await decode({ token, secret, salt: MOBILE_JWT_SALT });
+
+          if (payload?.sub) {
+            // Attach user info as headers for downstream route handlers
+            const response = NextResponse.next();
+            response.headers.set('X-Frame-Options', 'DENY');
+            response.headers.set('X-Content-Type-Options', 'nosniff');
+            response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+            response.headers.set('Permissions-Policy', 'geolocation=(self)');
+
+            // Forward user identity via request headers so route handlers can read it
+            const requestHeaders = new Headers(request.headers);
+            requestHeaders.set('x-mobile-user-id', payload.sub);
+            requestHeaders.set('x-mobile-user-email', payload.email ?? '');
+            requestHeaders.set('x-mobile-user-name', payload.name ?? '');
+
+            return NextResponse.next({
+              request: { headers: requestHeaders },
+            });
+          }
+        } catch {
+          // Invalid token - continue without mobile auth
+          // Route handlers will reject unauthenticated requests via session check
+        }
+      }
     }
   }
 

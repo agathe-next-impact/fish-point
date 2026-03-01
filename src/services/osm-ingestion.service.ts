@@ -301,6 +301,7 @@ async function processElement(
       data: {
         name,
         waterType,
+        osmTags: tags,
       },
     });
     result.spotsUpdated++;
@@ -326,6 +327,7 @@ async function processElement(
       dataOrigin: 'AUTO_OSM',
       externalId,
       externalSource: 'overpass_osm',
+      osmTags: tags,
     },
   });
 

@@ -1,0 +1,60 @@
+{
+  "expo": {
+    "name": "Fish Point",
+    "slug": "fish-point",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "fishpoint",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0369a1"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fishpoint.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Fish Point utilise votre position pour trouver les spots de peche a proximite.",
+        "NSCameraUsageDescription": "Fish Point utilise la camera pour photographier vos prises.",
+        "NSPhotoLibraryUsageDescription": "Fish Point accede a vos photos pour ajouter des images de prises."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0369a1",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.fishpoint.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-location",
+      "expo-image-picker",
+      "expo-camera",
+      [
+        "expo-notifications",
+        {
+          "color": "#0369a1"
+        }
+      ],
+      "expo-image",
+      "expo-sqlite",
+      "expo-web-browser",
+      "@rnmapbox/maps"
+    ]
+  }
+}

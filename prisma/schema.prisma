@@ -24,6 +24,7 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   passwordHash  String?
+  pushToken     String?
 
   accounts      Account[]
   sessions      Session[]
@@ -117,6 +118,14 @@ model Spot {
   fishabilityScore Float?
   scoreUpdatedAt   DateTime?
 
+  // Validation / confidence scoring
+  confidenceScore    Int?
+  confidenceDetails  Json?
+  validatedAt        DateTime?
+
+  // Raw OSM tags (for validation scoring)
+  osmTags            Json?
+
   // Linked monitoring stations
   hydroStationCode    String?
   tempStationCode     String?
@@ -142,6 +151,7 @@ model Spot {
   @@index([averageRating(sort: Desc)])
   @@index([fishabilityScore(sort: Desc)])
   @@index([dataOrigin])
+  @@index([confidenceScore])
   @@map("spots")
 }
 

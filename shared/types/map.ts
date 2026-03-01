@@ -1,0 +1,29 @@
+export interface MapViewport {
+  latitude: number;
+  longitude: number;
+  zoom: number;
+  bearing?: number;
+  pitch?: number;
+}
+
+export interface MapBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
+export type MapLayer = 'spots' | 'heatmap' | 'regulations' | 'satellite' | 'fishability' | 'privateSpots';
+
+export interface MapFiltersState {
+  radius: number;
+  waterTypes: string[];
+  fishingTypes: string[];
+  species: string[];
+  minRating: number;
+  minFishabilityScore: number;
+  showAutoDiscovered: boolean;
+  pmr: boolean;
+  nightFishing: boolean;
+  premiumOnly: boolean;
+}

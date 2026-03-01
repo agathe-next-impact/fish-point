@@ -138,6 +138,45 @@ export interface IngestionResult {
   duration: number;
 }
 
+// ─── Spot Validation Types ──────────────────────────────────────
+
+export interface ValidationSignal {
+  source: 'bdtopo' | 'georisques' | 'rpg' | 'hubeau' | 'sandre' | 'osm' | 'internal';
+  signal: string;
+  score: number;
+  details?: string;
+}
+
+export interface ValidationResult {
+  confidenceScore: number;
+  signals: ValidationSignal[];
+}
+
+// BD TOPO IGN WFS
+export interface BdTopoWaterBody {
+  found: boolean;
+  nature: string | null;
+  name: string | null;
+  layer: 'plan_d_eau' | 'surface_hydrographique' | null;
+}
+
+// Georisques ICPE
+export interface NearbyICPE {
+  hasLivestock: boolean;
+  installations: Array<{
+    name: string;
+    regime: string;
+    isLivestock: boolean;
+  }>;
+}
+
+// RPG agricultural parcel
+export interface RpgResult {
+  isInParcel: boolean;
+  cultureCode?: string;
+  cultureLabel?: string;
+}
+
 // Score types
 export interface SpotScore {
   spotId: string;
