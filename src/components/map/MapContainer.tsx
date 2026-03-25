@@ -14,6 +14,7 @@ import { RegulationZones } from './RegulationZones';
 import { PrivateSpotMarker } from '@/components/private-spots/PrivateSpotMarker';
 import type { SpotListItem } from '@/types/spot';
 import type { PrivateSpotSummary } from '@/types/private-spot';
+import type mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface MapBounds {
@@ -66,10 +67,17 @@ export function MapContainer({ spots = [], privateSpots = [], onSpotClick, onBou
     });
   }, [onBoundsChange]);
 
-  const handleLoad = useCallback(() => {
-    // Small delay to ensure mapRef is assigned after mount
-    setTimeout(emitBounds, 0);
-  }, [emitBounds]);
+  const handleLoad = useCallback((evt: mapboxgl.MapboxEvent) => {
+    if (!onBoundsChange) return;
+    const b = evt.target.getBounds();
+    if (!b) return;
+    onBoundsChange({
+      north: b.getNorth(),
+      south: b.getSouth(),
+      east: b.getEast(),
+      west: b.getWest(),
+    });
+  }, [onBoundsChange]);
 
   return (
     <div className={className || 'relative w-full h-full'}>

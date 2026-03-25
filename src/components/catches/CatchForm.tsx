@@ -8,8 +8,134 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNotificationStore } from '@/store/notification.store';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { WeatherData } from '@/types/weather';
+
+interface SearchOption {
+  id: string;
+  name: string;
+  extra?: string;
+}
+
+function useDebounce(value: string, delay: number) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debounced;
+}
+
+function AutocompleteInput({
+  placeholder,
+  searchUrl,
+  mapResults,
+  value,
+  onSelect,
+  error,
+}: {
+  placeholder: string;
+  searchUrl: string;
+  mapResults: (data: Record<string, unknown>[]) => SearchOption[];
+  value: { id: string; name: string } | null;
+  onSelect: (option: SearchOption | null) => void;
+  error?: string;
+}) {
+  const [query, setQuery] = useState(value?.name || '');
+  const [options, setOptions] = useState<SearchOption[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const debouncedQuery = useDebounce(query, 300);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!debouncedQuery || debouncedQuery.length < 2) {
+      setOptions([]);
+      return;
+    }
+    // Don't search if current query matches selected value
+    if (value && debouncedQuery === value.name) return;
+
+    const controller = new AbortController();
+    setLoading(true);
+    fetch(`${searchUrl}?q=${encodeURIComponent(debouncedQuery)}`, { signal: controller.signal })
+      .then((res) => res.json())
+      .then((json) => {
+        setOptions(mapResults(json.data));
+        setIsOpen(true);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, [debouncedQuery, searchUrl, mapResults, value]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <input
+          type="text"
+          placeholder={placeholder}
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            if (value) onSelect(null);
+          }}
+          onFocus={() => { if (options.length > 0) setIsOpen(true); }}
+          className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+            error ? 'border-destructive' : 'border-input'
+          } ${value ? 'pr-8' : ''}`}
+        />
+        {value && (
+          <button
+            type="button"
+            onClick={() => { setQuery(''); onSelect(null); }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+      {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+      {isOpen && options.length > 0 && (
+        <ul className="absolute z-50 mt-1 w-full max-h-60 overflow-auto rounded-md border bg-popover shadow-lg">
+          {options.map((opt) => (
+            <li key={opt.id}>
+              <button
+                type="button"
+                className="w-full text-left px-3 py-2 text-sm hover:bg-accent cursor-pointer"
+                onClick={() => {
+                  onSelect(opt);
+                  setQuery(opt.name);
+                  setIsOpen(false);
+                }}
+              >
+                <span>{opt.name}</span>
+                {opt.extra && <span className="text-muted-foreground ml-2 text-xs">{opt.extra}</span>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {isOpen && loading && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-2 text-xs text-muted-foreground shadow-lg">
+          Recherche...
+        </div>
+      )}
+    </div>
+  );
+}
 
 const LURE_TYPES = [
   'Crankbait',
@@ -73,6 +199,8 @@ export function CatchForm() {
   const [geoEnabled, setGeoEnabled] = useState(false);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
+  const [selectedSpot, setSelectedSpot] = useState<{ id: string; name: string } | null>(null);
+  const [selectedSpecies, setSelectedSpecies] = useState<{ id: string; name: string } | null>(null);
 
   const geo = useGeolocation({ enableHighAccuracy: true });
 
@@ -85,6 +213,20 @@ export function CatchForm() {
   });
 
   const spotId = watch('spotId');
+
+  const mapSpotResults = useCallback((data: Record<string, unknown>[]) =>
+    data.map((s) => ({
+      id: s.id as string,
+      name: s.name as string,
+      extra: (s.commune as string) || (s.department as string) || undefined,
+    })), []);
+
+  const mapSpeciesResults = useCallback((data: Record<string, unknown>[]) =>
+    data.map((s) => ({
+      id: s.id as string,
+      name: s.name as string,
+      extra: (s.scientificName as string) || undefined,
+    })), []);
 
   // Fetch weather when geolocation is captured or spotId is set
   const fetchWeather = useCallback(async (spotIdValue?: string) => {
@@ -160,8 +302,30 @@ export function CatchForm() {
       <h2 className="text-xl font-semibold">Enregistrer une prise</h2>
 
       {/* Core fields */}
-      <Input placeholder="ID du spot" {...register('spotId')} error={errors.spotId?.message} />
-      <Input placeholder="ID de l'espece" {...register('speciesId')} error={errors.speciesId?.message} />
+      <input type="hidden" {...register('spotId')} />
+      <AutocompleteInput
+        placeholder="Nom du spot"
+        searchUrl="/api/spots/search"
+        mapResults={mapSpotResults}
+        value={selectedSpot}
+        onSelect={(opt) => {
+          setSelectedSpot(opt);
+          setValue('spotId', opt?.id || '', { shouldValidate: true });
+        }}
+        error={errors.spotId?.message}
+      />
+      <input type="hidden" {...register('speciesId')} />
+      <AutocompleteInput
+        placeholder="Nom de l'espece"
+        searchUrl="/api/species/search"
+        mapResults={mapSpeciesResults}
+        value={selectedSpecies}
+        onSelect={(opt) => {
+          setSelectedSpecies(opt);
+          setValue('speciesId', opt?.id || '', { shouldValidate: true });
+        }}
+        error={errors.speciesId?.message}
+      />
 
       <div className="grid grid-cols-2 gap-4">
         <Input type="number" step="any" placeholder="Poids (g)" {...register('weight', { valueAsNumber: true })} error={errors.weight?.message} />
