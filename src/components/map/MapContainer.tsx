@@ -53,8 +53,8 @@ export function MapContainer({ spots = [], privateSpots = [], onSpotClick, onBou
     setMapStyle(style);
   }, []);
 
-  const emitBounds = useCallback(() => {
-    const map = mapRef.current;
+  const emitBounds = useCallback((evt?: { target?: MapRef }) => {
+    const map = mapRef.current ?? evt?.target;
     if (!map || !onBoundsChange) return;
     const b = map.getBounds();
     if (!b) return;

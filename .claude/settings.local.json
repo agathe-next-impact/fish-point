@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx prisma:*)",
+      "Bash(npx tsx:*)",
+      "Bash(xargs grep:*)",
+      "Bash(ls -la /c/dev/fish-point/src/app/api/spots/[id]/)",
+      "Bash(xargs basename:*)",
+      "Bash(xargs -I {} basename {})"
+    ]
+  }
+}

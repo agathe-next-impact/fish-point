@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import type { SpotListItem } from '@/types/spot';
 
 export interface MapBounds {
@@ -49,6 +49,7 @@ export function useMapSpots() {
     queryKey: ['mapSpots', debouncedBounds],
     queryFn: () => fetchBboxSpots(debouncedBounds!),
     enabled: debouncedBounds !== null,
+    placeholderData: keepPreviousData,
   });
 
   return {
