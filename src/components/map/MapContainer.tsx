@@ -53,8 +53,8 @@ export function MapContainer({ spots = [], privateSpots = [], onSpotClick, onBou
     setMapStyle(style);
   }, []);
 
-  const emitBounds = useCallback((evt?: { target?: MapRef }) => {
-    const map = mapRef.current ?? evt?.target;
+  const emitBounds = useCallback(() => {
+    const map = mapRef.current;
     if (!map || !onBoundsChange) return;
     const b = map.getBounds();
     if (!b) return;
@@ -65,6 +65,11 @@ export function MapContainer({ spots = [], privateSpots = [], onSpotClick, onBou
       west: b.getWest(),
     });
   }, [onBoundsChange]);
+
+  const handleLoad = useCallback(() => {
+    // Small delay to ensure mapRef is assigned after mount
+    setTimeout(emitBounds, 0);
+  }, [emitBounds]);
 
   return (
     <div className={className || 'relative w-full h-full'}>
@@ -78,7 +83,7 @@ export function MapContainer({ spots = [], privateSpots = [], onSpotClick, onBou
         }}
         onMove={handleMove}
         onMoveEnd={emitBounds}
-        onLoad={emitBounds}
+        onLoad={handleLoad}
         mapStyle={mapStyle}
         style={{ width: '100%', height: '100%' }}
         maxBounds={[[-10, 40], [12, 52]]}
