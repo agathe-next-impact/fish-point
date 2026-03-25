@@ -1,14 +1,28 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { Fish, Weight, Trophy, Target } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { StatsFilters } from '@/components/dashboard/StatsFilters';
-import { CatchesByHourChart } from '@/components/dashboard/CatchesByHourChart';
-import { BaitSuccessChart } from '@/components/dashboard/BaitSuccessChart';
-import { WeatherCorrelation } from '@/components/dashboard/WeatherCorrelation';
-import { ProgressionChart } from '@/components/dashboard/ProgressionChart';
+
+const CatchesByHourChart = dynamic(
+  () => import('@/components/dashboard/CatchesByHourChart').then((m) => m.CatchesByHourChart),
+  { loading: () => <Skeleton className="h-100" /> },
+);
+const BaitSuccessChart = dynamic(
+  () => import('@/components/dashboard/BaitSuccessChart').then((m) => m.BaitSuccessChart),
+  { loading: () => <Skeleton className="h-100" /> },
+);
+const WeatherCorrelation = dynamic(
+  () => import('@/components/dashboard/WeatherCorrelation').then((m) => m.WeatherCorrelation),
+  { loading: () => <Skeleton className="h-100" /> },
+);
+const ProgressionChart = dynamic(
+  () => import('@/components/dashboard/ProgressionChart').then((m) => m.ProgressionChart),
+  { loading: () => <Skeleton className="h-100" /> },
+);
 import {
   useCatchesByHour,
   useCatchesByBait,

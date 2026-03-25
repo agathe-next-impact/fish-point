@@ -1,7 +1,7 @@
 'use client';
 
 import { Marker, Popup } from 'react-map-gl/mapbox';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import Link from 'next/link';
 import { MapPin, Star, Navigation } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -23,7 +23,7 @@ interface SpotMarkerProps {
   onClick?: (spot: SpotListItem) => void;
 }
 
-export function SpotMarker({ spot, onClick }: SpotMarkerProps) {
+export const SpotMarker = memo(function SpotMarker({ spot, onClick }: SpotMarkerProps) {
   const [showPopup, setShowPopup] = useState(false);
 
   return (
@@ -105,4 +105,4 @@ export function SpotMarker({ spot, onClick }: SpotMarkerProps) {
       )}
     </>
   );
-}
+});

@@ -15,15 +15,27 @@ export async function GET(
       return NextResponse.json({ error: 'Shared catch not found' }, { status: 404 });
     }
 
-    const comments = await prisma.sharedCatchComment.findMany({
-      where: { sharedCatchId: id },
-      include: {
-        user: { select: { id: true, name: true, image: true } },
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    const page = parseInt(request.nextUrl.searchParams.get('page') || '1');
+    const limit = Math.min(parseInt(request.nextUrl.searchParams.get('limit') || '30'), 50);
+    const skip = (page - 1) * limit;
 
-    return NextResponse.json({ data: comments });
+    const [comments, total] = await Promise.all([
+      prisma.sharedCatchComment.findMany({
+        where: { sharedCatchId: id },
+        include: {
+          user: { select: { id: true, name: true, image: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+        skip,
+        take: limit,
+      }),
+      prisma.sharedCatchComment.count({ where: { sharedCatchId: id } }),
+    ]);
+
+    return NextResponse.json({
+      data: comments,
+      meta: { total, page, limit, hasMore: skip + limit < total },
+    });
   } catch (error) {
     console.error('GET /api/feed/[id]/comments error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

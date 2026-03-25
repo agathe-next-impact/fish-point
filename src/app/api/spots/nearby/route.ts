@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getCached } from '@/lib/redis';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,29 +14,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'lat and lng are required' }, { status: 400 });
     }
 
-    // Use raw SQL with PostGIS
-    const spots = await prisma.$queryRawUnsafe(`
-      SELECT
-        s.id, s.slug, s.name, s.latitude, s.longitude,
-        s.department, s.commune, s."waterType", s."waterCategory",
-        s."fishingTypes", s."averageRating", s."reviewCount",
-        s."isPremium", s."isVerified", s."fishabilityScore", s."dataOrigin", s."accessType",
-        ST_Distance(
-          s.geometry,
-          ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
-        ) as distance
-      FROM spots s
-      WHERE s.status = 'APPROVED'
-        AND ST_DWithin(
-          s.geometry,
-          ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
-          $3
-        )
-      ORDER BY distance ASC
-      LIMIT $4
-    `, lng, lat, radius, limit);
+    // Round coords to ~1km grid for cache efficiency
+    const rlat = Math.round(lat * 100) / 100;
+    const rlng = Math.round(lng * 100) / 100;
+    const cacheKey = `spots:nearby:${rlat}:${rlng}:${radius}:${limit}`;
 
-    return NextResponse.json({ data: spots });
+    const spots = await getCached(cacheKey, () =>
+      prisma.$queryRawUnsafe(`
+        SELECT
+          s.id, s.slug, s.name, s.latitude, s.longitude,
+          s.department, s.commune, s."waterType", s."waterCategory",
+          s."fishingTypes", s."averageRating", s."reviewCount",
+          s."isPremium", s."isVerified", s."fishabilityScore", s."dataOrigin", s."accessType",
+          ST_Distance(
+            s.geometry,
+            ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+          ) as distance
+        FROM spots s
+        WHERE s.status = 'APPROVED'
+          AND ST_DWithin(
+            s.geometry,
+            ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+            $3
+          )
+        ORDER BY distance ASC
+        LIMIT $4
+      `, lng, lat, radius, limit),
+    300);
+
+    return NextResponse.json({ data: spots }, {
+      headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
+    });
   } catch (error) {
     console.error('GET /api/spots/nearby error:', error);
     // Fallback to non-spatial query if PostGIS not available

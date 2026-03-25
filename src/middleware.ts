@@ -4,6 +4,10 @@ import { decode } from 'next-auth/jwt';
 
 const MOBILE_JWT_SALT = 'mobile-session-token';
 
+// Simple in-memory JWT cache to avoid re-decoding on every request
+const jwtCache = new Map<string, { payload: { sub: string; email?: string; name?: string }; expiry: number }>();
+const JWT_CACHE_TTL = 60 * 1000; // 1 minute
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -46,7 +50,26 @@ export async function middleware(request: NextRequest) {
 
       if (secret) {
         try {
-          const payload = await decode({ token, secret, salt: MOBILE_JWT_SALT });
+          // Check JWT cache first
+          const cached = jwtCache.get(token);
+          let payload: { sub: string; email?: string; name?: string } | null = null;
+
+          if (cached && cached.expiry > Date.now()) {
+            payload = cached.payload;
+          } else {
+            const decoded = await decode({ token, secret, salt: MOBILE_JWT_SALT });
+            if (decoded?.sub) {
+              payload = { sub: decoded.sub, email: decoded.email ?? undefined, name: decoded.name ?? undefined };
+              jwtCache.set(token, { payload, expiry: Date.now() + JWT_CACHE_TTL });
+              // Prune cache if it grows too large
+              if (jwtCache.size > 1000) {
+                const now = Date.now();
+                for (const [key, val] of jwtCache) {
+                  if (val.expiry < now) jwtCache.delete(key);
+                }
+              }
+            }
+          }
 
           if (payload?.sub) {
             // Attach user info as headers for downstream route handlers
@@ -59,8 +82,8 @@ export async function middleware(request: NextRequest) {
             // Forward user identity via request headers so route handlers can read it
             const requestHeaders = new Headers(request.headers);
             requestHeaders.set('x-mobile-user-id', payload.sub);
-            requestHeaders.set('x-mobile-user-email', payload.email ?? '');
-            requestHeaders.set('x-mobile-user-name', payload.name ?? '');
+            requestHeaders.set('x-mobile-user-email', payload.email || '');
+            requestHeaders.set('x-mobile-user-name', payload.name || '');
 
             return NextResponse.next({
               request: { headers: requestHeaders },

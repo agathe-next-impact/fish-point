@@ -428,35 +428,53 @@ export async function runAllAlerts(): Promise<AlertRunSummary> {
   const uniqueUserIds = usersWithAlerts.map((u) => u.userId);
   summary.usersProcessed = uniqueUserIds.length;
 
-  for (const userId of uniqueUserIds) {
-    try {
-      // Evaluate ideal conditions
-      const idealResults = await evaluateIdealConditions(userId);
-      summary.details.idealConditions += idealResults.length;
-      summary.alertsTriggered += idealResults.length;
-    } catch (error) {
-      console.error(`Ideal conditions evaluation failed for user ${userId}:`, error);
-      summary.errors++;
-    }
+  // Process users in batches of 10 for concurrency control
+  const BATCH_SIZE = 10;
+  for (let i = 0; i < uniqueUserIds.length; i += BATCH_SIZE) {
+    const batch = uniqueUserIds.slice(i, i + BATCH_SIZE);
 
-    try {
-      // Evaluate water level alerts
-      const waterResults = await evaluateWaterLevelAlerts(userId);
-      summary.details.waterLevel += waterResults.length;
-      summary.alertsTriggered += waterResults.length;
-    } catch (error) {
-      console.error(`Water level evaluation failed for user ${userId}:`, error);
-      summary.errors++;
-    }
+    const results = await Promise.allSettled(
+      batch.map(async (userId) => {
+        const userResults = { ideal: 0, water: 0, regulation: 0, errors: 0 };
 
-    try {
-      // Evaluate regulation reminders
-      const regResults = await evaluateRegulationReminders(userId);
-      summary.details.regulations += regResults.length;
-      summary.alertsTriggered += regResults.length;
-    } catch (error) {
-      console.error(`Regulation evaluation failed for user ${userId}:`, error);
-      summary.errors++;
+        try {
+          const idealResults = await evaluateIdealConditions(userId);
+          userResults.ideal = idealResults.length;
+        } catch (error) {
+          console.error(`Ideal conditions evaluation failed for user ${userId}:`, error);
+          userResults.errors++;
+        }
+
+        try {
+          const waterResults = await evaluateWaterLevelAlerts(userId);
+          userResults.water = waterResults.length;
+        } catch (error) {
+          console.error(`Water level evaluation failed for user ${userId}:`, error);
+          userResults.errors++;
+        }
+
+        try {
+          const regResults = await evaluateRegulationReminders(userId);
+          userResults.regulation = regResults.length;
+        } catch (error) {
+          console.error(`Regulation evaluation failed for user ${userId}:`, error);
+          userResults.errors++;
+        }
+
+        return userResults;
+      }),
+    );
+
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        summary.details.idealConditions += result.value.ideal;
+        summary.details.waterLevel += result.value.water;
+        summary.details.regulations += result.value.regulation;
+        summary.alertsTriggered += result.value.ideal + result.value.water + result.value.regulation;
+        summary.errors += result.value.errors;
+      } else {
+        summary.errors++;
+      }
     }
   }
 

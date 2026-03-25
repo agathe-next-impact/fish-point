@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, memo } from 'react';
 import { Marker } from 'react-map-gl/mapbox';
 import Supercluster from 'supercluster';
 import { useMapStore } from '@/store/map.store';
@@ -12,7 +12,7 @@ interface SpotClusterProps {
   onSpotClick?: (spot: SpotListItem) => void;
 }
 
-export function SpotCluster({ spots, onSpotClick }: SpotClusterProps) {
+export const SpotCluster = memo(function SpotCluster({ spots, onSpotClick }: SpotClusterProps) {
   const viewport = useMapStore((s) => s.viewport);
   const setViewport = useMapStore((s) => s.setViewport);
 
@@ -91,4 +91,4 @@ export function SpotCluster({ spots, onSpotClick }: SpotClusterProps) {
       })}
     </>
   );
-}
+});

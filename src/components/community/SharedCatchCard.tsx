@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { Heart, MessageCircle, MapPin, Fish, Ruler, Weight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ interface SharedCatchCardProps {
   item: SharedCatchFeedItem;
 }
 
-export function SharedCatchCard({ item }: SharedCatchCardProps) {
+export const SharedCatchCard = memo(function SharedCatchCard({ item }: SharedCatchCardProps) {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
 
@@ -172,4 +172,4 @@ export function SharedCatchCard({ item }: SharedCatchCardProps) {
       </CardContent>
     </Card>
   );
-}
+});

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getCached } from '@/lib/redis';
 
 interface QualityParameter {
   parameter: string;
@@ -61,55 +62,58 @@ export async function GET(
       return NextResponse.json({ error: 'Spot not found' }, { status: 404 });
     }
 
-    // Get latest measurement per parameter
-    const snapshots = await prisma.waterQualitySnapshot.findMany({
-      where: { spotId: spot.id },
-      orderBy: { measurementDate: 'desc' },
-    });
-
-    // Keep only the latest per parameter
-    const latestByParam = new Map<string, typeof snapshots[0]>();
-    for (const s of snapshots) {
-      if (!latestByParam.has(s.parameter)) {
-        latestByParam.set(s.parameter, s);
-      }
-    }
-
-    const parameters: QualityParameter[] = [];
-    for (const [param, snapshot] of latestByParam) {
-      if (!PARAMETER_LABELS[param]) continue;
-      parameters.push({
-        parameter: param,
-        label: PARAMETER_LABELS[param],
-        value: snapshot.value,
-        unit: snapshot.unit,
-        quality: assessQuality(param, snapshot.value),
-        measurementDate: snapshot.measurementDate.toISOString(),
+    const cacheKey = `spot:${spot.id}:water-quality`;
+    const result = await getCached(cacheKey, async () => {
+      const snapshots = await prisma.waterQualitySnapshot.findMany({
+        where: { spotId: spot.id },
+        orderBy: { measurementDate: 'desc' },
       });
-    }
 
-    // Also fetch biological indices
-    const bioIndices = await prisma.biologicalIndex.findMany({
-      where: { spotId: spot.id },
-      orderBy: { measurementDate: 'desc' },
-    });
-
-    // Keep most recent per indexType
-    const latestBio = new Map<string, typeof bioIndices[0]>();
-    for (const idx of bioIndices) {
-      if (!latestBio.has(idx.indexType)) {
-        latestBio.set(idx.indexType, idx);
+      const latestByParam = new Map<string, typeof snapshots[0]>();
+      for (const s of snapshots) {
+        if (!latestByParam.has(s.parameter)) {
+          latestByParam.set(s.parameter, s);
+        }
       }
-    }
 
-    const biologicalIndices = Array.from(latestBio.values()).map((idx) => ({
-      indexType: idx.indexType,
-      value: idx.value,
-      qualityClass: idx.qualityClass,
-      measurementDate: idx.measurementDate.toISOString(),
-    }));
+      const parameters: QualityParameter[] = [];
+      for (const [param, snapshot] of latestByParam) {
+        if (!PARAMETER_LABELS[param]) continue;
+        parameters.push({
+          parameter: param,
+          label: PARAMETER_LABELS[param],
+          value: snapshot.value,
+          unit: snapshot.unit,
+          quality: assessQuality(param, snapshot.value),
+          measurementDate: snapshot.measurementDate.toISOString(),
+        });
+      }
 
-    return NextResponse.json({ data: parameters, biologicalIndices });
+      const bioIndices = await prisma.biologicalIndex.findMany({
+        where: { spotId: spot.id },
+        orderBy: { measurementDate: 'desc' },
+      });
+
+      const latestBio = new Map<string, typeof bioIndices[0]>();
+      for (const idx of bioIndices) {
+        if (!latestBio.has(idx.indexType)) {
+          latestBio.set(idx.indexType, idx);
+        }
+      }
+
+      const biologicalIndices = Array.from(latestBio.values()).map((idx) => ({
+        indexType: idx.indexType,
+        value: idx.value,
+        qualityClass: idx.qualityClass,
+        measurementDate: idx.measurementDate.toISOString(),
+      }));
+
+      return { data: parameters, biologicalIndices };
+    }, 3600);
+
+    return NextResponse.json(result, {
+      headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=7200' },
+    });
   } catch (error) {
     console.error('Water quality error:', error);
     return NextResponse.json({ error: 'Failed to fetch water quality' }, { status: 500 });

@@ -263,6 +263,8 @@ model Catch {
 
   @@index([userId])
   @@index([spotId])
+  @@index([speciesId])
+  @@index([userId, spotId])
   @@index([caughtAt(sort: Desc)])
   @@map("catches")
 }
@@ -284,6 +286,8 @@ model Review {
   spot           Spot     @relation(fields: [spotId], references: [id])
 
   @@unique([userId, spotId])
+  @@index([spotId])
+  @@index([userId])
   @@map("reviews")
 }
 
@@ -297,6 +301,8 @@ model Favorite {
   createdAt DateTime @default(now())
 
   @@unique([userId, spotId, listName])
+  @@index([spotId])
+  @@index([userId])
   @@map("favorites")
 }
 
@@ -329,6 +335,7 @@ model Notification {
   createdAt DateTime         @default(now())
 
   @@index([userId, isRead])
+  @@index([userId, type])
   @@map("notifications")
 }
 
@@ -622,6 +629,7 @@ model SharedCatch {
   createdAt    DateTime @default(now())
 
   @@index([createdAt(sort: Desc)])
+  @@index([userId])
   @@map("shared_catches")
 }
 
@@ -634,6 +642,7 @@ model SharedCatchLike {
   createdAt     DateTime    @default(now())
 
   @@unique([sharedCatchId, userId])
+  @@index([userId])
   @@map("shared_catch_likes")
 }
 

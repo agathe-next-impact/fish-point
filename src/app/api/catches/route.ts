@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { invalidateCache } from '@/lib/redis';
+import { writeRateLimit, checkRateLimit } from '@/lib/rate-limit';
 import { createCatchSchema } from '@/validators/catch.schema';
 import { FISHBASE_DATA, estimateWeightFromLength } from '@/config/fishbase-data';
 
@@ -162,6 +164,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { limited, headers: rlHeaders } = await checkRateLimit(writeRateLimit, `catch:${session.user.id}`);
+    if (limited) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429, headers: rlHeaders });
+    }
+
     const body = await request.json();
     const validation = createCatchSchema.safeParse(body);
     if (!validation.success) {
@@ -231,6 +238,8 @@ export async function POST(request: NextRequest) {
           species.maxLengthCm,
         )
       : [];
+
+    await invalidateCache(`user:${session.user.id}:catches:*`);
 
     return NextResponse.json({ data: catchRecord, warnings }, { status: 201 });
   } catch (error) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { createReviewSchema } from '@/validators/review.schema';
+import { invalidateCache } from '@/lib/redis';
 
 export async function GET(
   request: NextRequest,
@@ -9,12 +10,24 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const reviews = await prisma.review.findMany({
-      where: { spotId: id },
-      include: { user: { select: { name: true, image: true } } },
-      orderBy: { createdAt: 'desc' },
+    const page = parseInt(request.nextUrl.searchParams.get('page') || '1');
+    const limit = Math.min(parseInt(request.nextUrl.searchParams.get('limit') || '20'), 50);
+    const skip = (page - 1) * limit;
+
+    const [reviews, total] = await Promise.all([
+      prisma.review.findMany({
+        where: { spotId: id },
+        include: { user: { select: { name: true, image: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.review.count({ where: { spotId: id } }),
+    ]);
+    return NextResponse.json({
+      data: reviews,
+      meta: { total, page, limit, hasMore: skip + limit < total },
     });
-    return NextResponse.json({ data: reviews });
   } catch (error) {
     console.error('GET reviews error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -65,6 +78,8 @@ export async function POST(
         reviewCount: agg._count,
       },
     });
+
+    await invalidateCache(`spots:search:*`);
 
     return NextResponse.json({ data: review }, { status: 201 });
   } catch (error) {

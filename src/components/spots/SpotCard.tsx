@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Star, MapPin, Navigation } from 'lucide-react';
@@ -22,7 +23,7 @@ interface SpotCardProps {
   spot: SpotListItem;
 }
 
-export function SpotCard({ spot }: SpotCardProps) {
+export const SpotCard = memo(function SpotCard({ spot }: SpotCardProps) {
   const imageUrl = spot.primaryImage || getOrthoPhotoUrl(spot.latitude, spot.longitude, 600, 400);
 
   return (
@@ -86,4 +87,4 @@ export function SpotCard({ spot }: SpotCardProps) {
       </Card>
     </Link>
   );
-}
+});

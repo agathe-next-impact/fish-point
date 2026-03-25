@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm uninstall:*)",
+      "Read(//c/dev/fish-point/**)",
+      "Bash(1:*)"
+    ],
+    "additionalDirectories": [
+      "C:\\dev\\fish-point\\prisma\\migrations"
+    ]
+  }
+}

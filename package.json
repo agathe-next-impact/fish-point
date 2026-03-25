@@ -2,13 +2,16 @@
   "name": "fish-point",
   "version": "0.1.0",
   "private": true,
-  "workspaces": ["shared"],
+  "workspaces": [
+    "shared"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
     "postinstall": "prisma generate",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
@@ -50,7 +53,6 @@
     "stripe": "^20.3.1",
     "suncalc": "^1.9.0",
     "supercluster": "^8.0.1",
-    "swiper": "^12.1.1",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6",
     "zustand": "^5.0.11"

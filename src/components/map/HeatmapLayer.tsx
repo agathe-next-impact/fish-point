@@ -1,7 +1,7 @@
 'use client';
 
 import { Source, Layer } from 'react-map-gl/mapbox';
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import type { SpotListItem } from '@/types/spot';
 import type { GeoJSONFeatureCollection } from '@/types/map';
 
@@ -9,7 +9,7 @@ interface HeatmapLayerProps {
   spots: SpotListItem[];
 }
 
-export function HeatmapLayer({ spots }: HeatmapLayerProps) {
+export const HeatmapLayer = memo(function HeatmapLayer({ spots }: HeatmapLayerProps) {
   const geojson: GeoJSONFeatureCollection = useMemo(
     () => ({
       type: 'FeatureCollection',
@@ -52,4 +52,4 @@ export function HeatmapLayer({ spots }: HeatmapLayerProps) {
       />
     </Source>
   );
-}
+});

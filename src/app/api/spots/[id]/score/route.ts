@@ -68,46 +68,56 @@ export async function GET(
       const staticScore = spot.staticScore ?? 50;
       const fishabilityScore = Math.round(0.45 * staticScore + 0.55 * dynamicScore);
 
-      // Gather extra factors for display
+      // Gather extra factors in parallel for performance
       const factors: Array<{ name: string; impact: 'positive' | 'neutral' | 'negative'; description: string }> = [];
 
-      // VigiEau drought restrictions (go/no-go)
-      try {
-        const drought = await fetchDroughtRestriction(spot.latitude, spot.longitude);
-        if (drought) {
-          const impact = drought.fishingImpacted ? 'negative' : 'neutral';
-          factors.push({ name: 'Sécheresse', impact, description: drought.label });
-        }
-      } catch { /* non-critical */ }
+      const [
+        droughtResult,
+        flowResult,
+        vigicruesResult,
+        deltaResult,
+        piezoResult,
+        tempResult,
+        floodResult,
+        airQualityResult,
+      ] = await Promise.allSettled([
+        fetchDroughtRestriction(spot.latitude, spot.longitude),
+        getFlowStatusForCoords(spot.latitude, spot.longitude),
+        spot.hydroStationCode ? findTronconForStation(spot.hydroStationCode) : Promise.resolve(null),
+        fetchPressureDelta(spot.latitude, spot.longitude),
+        spot.piezoStationCode ? fetchPiezoLevel(spot.piezoStationCode) : Promise.resolve(null),
+        spot.tempStationCode ? fetchWaterTemperature(spot.tempStationCode) : Promise.resolve(null),
+        fetchFloodForecast(spot.latitude, spot.longitude),
+        fetchAirQualityData(spot.latitude, spot.longitude),
+      ]);
 
-      // Flow status
-      try {
-        const flow = await getFlowStatusForCoords(spot.latitude, spot.longitude);
-        if (flow) {
-          const impact = flow.status === 'flowing' ? 'positive' : flow.status === 'dry' ? 'negative' : 'neutral';
-          factors.push({ name: 'Écoulement', impact, description: flow.label });
-        }
-      } catch { /* non-critical */ }
-
-      // Vigicrues
-      if (spot.hydroStationCode) {
-        try {
-          const alert = await findTronconForStation(spot.hydroStationCode);
-          if (alert) {
-            const impact = alert.level === 'green' ? 'positive' : alert.level === 'red' ? 'negative' : 'neutral';
-            factors.push({ name: 'Vigilance crues', impact, description: `${alert.tronconName} — ${alert.level}` });
-          }
-        } catch { /* non-critical */ }
+      // VigiEau drought
+      if (droughtResult.status === 'fulfilled' && droughtResult.value) {
+        const drought = droughtResult.value;
+        const impact = drought.fishingImpacted ? 'negative' : 'neutral';
+        factors.push({ name: 'Sécheresse', impact, description: drought.label });
       }
 
-      // 48h pressure delta (replaces simple pressure reading)
-      try {
-        const delta = await fetchPressureDelta(spot.latitude, spot.longitude);
-        if (delta) {
-          const impact = delta.delta < -2 ? 'positive' : delta.delta > 5 ? 'negative' : 'neutral';
-          factors.push({ name: 'Tendance baro', impact, description: delta.label });
-        }
-      } catch { /* non-critical */ }
+      // Flow status
+      if (flowResult.status === 'fulfilled' && flowResult.value) {
+        const flow = flowResult.value;
+        const impact = flow.status === 'flowing' ? 'positive' : flow.status === 'dry' ? 'negative' : 'neutral';
+        factors.push({ name: 'Écoulement', impact, description: flow.label });
+      }
+
+      // Vigicrues
+      if (vigicruesResult.status === 'fulfilled' && vigicruesResult.value) {
+        const alert = vigicruesResult.value;
+        const impact = alert.level === 'green' ? 'positive' : alert.level === 'red' ? 'negative' : 'neutral';
+        factors.push({ name: 'Vigilance crues', impact, description: `${alert.tronconName} — ${alert.level}` });
+      }
+
+      // 48h pressure delta
+      if (deltaResult.status === 'fulfilled' && deltaResult.value) {
+        const delta = deltaResult.value;
+        const impact = delta.delta < -2 ? 'positive' : delta.delta > 5 ? 'negative' : 'neutral';
+        factors.push({ name: 'Tendance baro', impact, description: delta.label });
+      }
 
       // Current pressure
       const pressure = weather.pressure;
@@ -143,7 +153,7 @@ export async function GET(
         factors.push({ name: 'Précipitations', impact: 'neutral', description: `${weather.precipitationProbability}% probable` });
       }
 
-      // Solunar (replaces simple moon phase)
+      // Solunar
       const solunar = computeSolunarData(new Date(), spot.latitude, spot.longitude);
       if (solunar.currentActivity === 'major') {
         factors.push({ name: 'Solunaire', impact: 'positive', description: `${solunar.moonPhaseName} — période majeure` });
@@ -153,45 +163,31 @@ export async function GET(
         factors.push({ name: 'Solunaire', impact: 'neutral', description: solunar.moonPhaseName });
       }
 
-      // Piezometric level (informational)
-      if (spot.piezoStationCode) {
-        try {
-          const piezo = await fetchPiezoLevel(spot.piezoStationCode);
-          if (piezo) {
-            const impact = piezo.trend === 'rising' ? 'positive' : piezo.trend === 'falling' ? 'negative' : 'neutral';
-            factors.push({ name: 'Nappe', impact, description: piezo.label });
-          }
-        } catch { /* non-critical */ }
+      // Piezometric level
+      if (piezoResult.status === 'fulfilled' && piezoResult.value) {
+        const piezo = piezoResult.value;
+        const impact = piezo.trend === 'rising' ? 'positive' : piezo.trend === 'falling' ? 'negative' : 'neutral';
+        factors.push({ name: 'Nappe', impact, description: piezo.label });
       }
 
       // Water temperature
-      if (spot.tempStationCode) {
-        try {
-          const tempData = await fetchWaterTemperature(spot.tempStationCode);
-          if (tempData) {
-            const t = tempData.temperature;
-            const impact = (t >= 12 && t <= 22) ? 'positive' : (t < 4 || t > 30) ? 'negative' : 'neutral';
-            factors.push({ name: 'Temp. eau', impact, description: `${t.toFixed(1)}°C` });
-          }
-        } catch { /* non-critical */ }
+      if (tempResult.status === 'fulfilled' && tempResult.value) {
+        const t = tempResult.value.temperature;
+        const impact = (t >= 12 && t <= 22) ? 'positive' : (t < 4 || t > 30) ? 'negative' : 'neutral';
+        factors.push({ name: 'Temp. eau', impact, description: `${t.toFixed(1)}°C` });
       }
 
-      // GloFAS flood forecast (7-day)
-      try {
-        const flood = await fetchFloodForecast(spot.latitude, spot.longitude);
-        if (flood && flood.riskLevel !== 'low') {
-          const impact = flood.riskLevel === 'extreme' || flood.riskLevel === 'high' ? 'negative' : 'neutral';
-          factors.push({ name: 'Prévision crues', impact, description: flood.label });
-        }
-      } catch { /* non-critical */ }
+      // GloFAS flood forecast
+      if (floodResult.status === 'fulfilled' && floodResult.value && floodResult.value.riskLevel !== 'low') {
+        const flood = floodResult.value;
+        const impact = flood.riskLevel === 'extreme' || flood.riskLevel === 'high' ? 'negative' : 'neutral';
+        factors.push({ name: 'Prévision crues', impact, description: flood.label });
+      }
 
-      // Air quality / pollen (insect hatch indicator)
-      try {
-        const airQuality = await fetchAirQualityData(spot.latitude, spot.longitude);
-        if (airQuality && airQuality.insectHatchLikely) {
-          factors.push({ name: 'Pollen', impact: 'positive', description: airQuality.label });
-        }
-      } catch { /* non-critical */ }
+      // Air quality / pollen
+      if (airQualityResult.status === 'fulfilled' && airQualityResult.value?.insectHatchLikely) {
+        factors.push({ name: 'Pollen', impact: 'positive', description: airQualityResult.value.label });
+      }
 
       return {
         spotId: spot.id,

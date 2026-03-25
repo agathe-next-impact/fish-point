@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { getCached } from '@/lib/redis';
 
 export async function GET() {
   try {
@@ -11,7 +12,8 @@ export async function GET() {
 
     const userId = session.user.id;
 
-    // Fetch all user catches with relevant fields
+    const cacheKey = `user:${userId}:catches:stats`;
+    const statsData = await getCached(cacheKey, async () => {
     const catches = await prisma.catch.findMany({
       where: { userId },
       select: {
@@ -154,15 +156,18 @@ export async function GET() {
     }));
     weatherCorrelation.pressure = pressureCounts;
 
-    return NextResponse.json({
-      data: {
+    return {
         totalCatches: catches.length,
         catchesByHour,
         catchesByBait,
         catchesBySpecies,
         catchesByMonth,
         weatherCorrelation,
-      },
+      };
+    }, 300);
+
+    return NextResponse.json({ data: statsData }, {
+      headers: { 'Cache-Control': 'private, max-age=300' },
     });
   } catch (error) {
     console.error('GET /api/catches/stats error:', error);
