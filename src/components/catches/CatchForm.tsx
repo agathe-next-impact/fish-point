@@ -3,6 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { createCatchSchema, type CreateCatchFormInput } from '@/validators/catch.schema';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -194,6 +195,7 @@ function CollapsibleSection({ title, defaultOpen = false, children }: Collapsibl
 
 export function CatchForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const addToast = useNotificationStore((s) => s.addToast);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [geoEnabled, setGeoEnabled] = useState(false);
@@ -287,6 +289,9 @@ export function CatchForm() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error('Failed');
+
+      await queryClient.invalidateQueries({ queryKey: ['catches'] });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
 
       addToast({ type: 'success', title: 'Prise enregistree !' });
       router.push('/catches');
