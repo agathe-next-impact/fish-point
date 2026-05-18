@@ -1,13 +1,13 @@
 'use client';
 
-import { Marker, Popup } from 'react-map-gl/mapbox';
+import { Marker, Popup } from 'react-map-gl/maplibre';
 import { useState, memo } from 'react';
 import Link from 'next/link';
 import { MapPin, Star, Navigation } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { WATER_TYPE_LABELS } from '@/lib/constants';
-import { formatDistance } from '@/lib/mapbox';
+import { formatDistance } from '@/lib/map';
 import type { SpotListItem } from '@/types/spot';
 
 function getFishabilityColor(score: number): string {

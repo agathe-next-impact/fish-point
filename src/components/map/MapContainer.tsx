@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
-import Map, { NavigationControl, GeolocateControl, type MapRef, type ViewStateChangeEvent } from 'react-map-gl/mapbox';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import Map, { NavigationControl, GeolocateControl, type MapRef, type ViewStateChangeEvent } from 'react-map-gl/maplibre';
 import { useMapStore } from '@/store/map.store';
-import { MAPBOX_TOKEN, MAP_STYLES, DEFAULT_CENTER } from '@/lib/mapbox';
+import { DEFAULT_CENTER, MAP_STYLE_KEYS, buildSatelliteStyle, getDefaultVectorStyle, type MapStyleKey } from '@/lib/map';
+import '@/lib/map-runtime'; // side-effect: registers `pmtiles://` protocol on client
 import { SpotCluster } from './SpotCluster';
 import { MapControls } from './MapControls';
 import { MapFilters } from './MapFilters';
@@ -14,8 +15,7 @@ import { RegulationZones } from './RegulationZones';
 import { PrivateSpotMarker } from '@/components/private-spots/PrivateSpotMarker';
 import type { SpotListItem } from '@/types/spot';
 import type { PrivateSpotSummary } from '@/types/private-spot';
-import type mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
 interface MapBounds {
   north: number;
@@ -37,7 +37,12 @@ export function MapContainer({ spots = [], privateSpots = [], onSpotClick, onBou
   const viewport = useMapStore((s) => s.viewport);
   const setViewport = useMapStore((s) => s.setViewport);
   const activeLayers = useMapStore((s) => s.activeLayers);
-  const [mapStyle, setMapStyle] = useState<string>(MAP_STYLES.outdoors);
+  const [styleKey, setStyleKey] = useState<MapStyleKey>(MAP_STYLE_KEYS.vector);
+
+  const mapStyle = useMemo(
+    () => (styleKey === MAP_STYLE_KEYS.satellite ? buildSatelliteStyle() : getDefaultVectorStyle()),
+    [styleKey],
+  );
 
   const handleMove = useCallback(
     (evt: ViewStateChangeEvent) => {
@@ -50,8 +55,8 @@ export function MapContainer({ spots = [], privateSpots = [], onSpotClick, onBou
     [setViewport],
   );
 
-  const handleStyleChange = useCallback((style: string) => {
-    setMapStyle(style);
+  const handleStyleChange = useCallback((next: MapStyleKey) => {
+    setStyleKey(next);
   }, []);
 
   const emitBounds = useCallback(() => {
@@ -67,23 +72,10 @@ export function MapContainer({ spots = [], privateSpots = [], onSpotClick, onBou
     });
   }, [onBoundsChange]);
 
-  const handleLoad = useCallback((evt: mapboxgl.MapboxEvent) => {
-    if (!onBoundsChange) return;
-    const b = evt.target.getBounds();
-    if (!b) return;
-    onBoundsChange({
-      north: b.getNorth(),
-      south: b.getSouth(),
-      east: b.getEast(),
-      west: b.getWest(),
-    });
-  }, [onBoundsChange]);
-
   return (
     <div className={className || 'relative w-full h-full'}>
       <Map
         ref={mapRef}
-        mapboxAccessToken={MAPBOX_TOKEN}
         initialViewState={{
           latitude: viewport.latitude || DEFAULT_CENTER.latitude,
           longitude: viewport.longitude || DEFAULT_CENTER.longitude,
@@ -91,7 +83,7 @@ export function MapContainer({ spots = [], privateSpots = [], onSpotClick, onBou
         }}
         onMove={handleMove}
         onMoveEnd={emitBounds}
-        onLoad={handleLoad}
+        onLoad={emitBounds}
         mapStyle={mapStyle}
         style={{ width: '100%', height: '100%' }}
         maxBounds={[[-10, 40], [12, 52]]}
@@ -103,7 +95,6 @@ export function MapContainer({ spots = [], privateSpots = [], onSpotClick, onBou
         <GeolocateControl
           position="top-right"
           trackUserLocation
-          showUserHeading
           positionOptions={{ enableHighAccuracy: true }}
         />
 
@@ -125,7 +116,7 @@ export function MapContainer({ spots = [], privateSpots = [], onSpotClick, onBou
       </Map>
 
       <MapControls
-        mapStyle={mapStyle}
+        styleKey={styleKey}
         onStyleChange={handleStyleChange}
       />
       <MapFilters />

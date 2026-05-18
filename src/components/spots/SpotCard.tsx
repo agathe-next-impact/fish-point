@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { WATER_TYPE_LABELS } from '@/lib/constants';
 import { getDepartmentName } from '@/config/departments';
-import { formatDistance } from '@/lib/mapbox';
+import { formatDistance } from '@/lib/map';
 import { getOrthoPhotoUrl } from '@/services/ign-ortho.service';
 import { SpotAccessBadge } from './SpotAccessBadge';
 import type { SpotListItem } from '@/types/spot';

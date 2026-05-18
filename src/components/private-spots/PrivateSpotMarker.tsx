@@ -1,6 +1,6 @@
 'use client';
 
-import { Marker, Popup } from 'react-map-gl/mapbox';
+import { Marker, Popup } from 'react-map-gl/maplibre';
 import { useState } from 'react';
 import Link from 'next/link';
 import { MapPin, Star, Fish, Anchor, Flag, Lock } from 'lucide-react';

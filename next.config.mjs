@@ -12,10 +12,6 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**.mapbox.com',
-      },
-      {
-        protocol: 'https',
         hostname: 'lh3.googleusercontent.com',
       },
       {

@@ -1,21 +1,24 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Map, { Marker, NavigationControl, type MapMouseEvent } from 'react-map-gl/mapbox';
+import Map, { Marker, NavigationControl, type MapMouseEvent } from 'react-map-gl/maplibre';
 import { MapPin } from 'lucide-react';
 import { PrivateSpotForm } from '@/components/private-spots/PrivateSpotForm';
 import { useCreatePrivateSpot } from '@/hooks/usePrivateSpots';
 import { useNotificationStore } from '@/store/notification.store';
-import { MAPBOX_TOKEN, MAP_STYLES, DEFAULT_CENTER } from '@/lib/mapbox';
+import { DEFAULT_CENTER, getDefaultVectorStyle } from '@/lib/map';
+import '@/lib/map-runtime';
 import type { CreatePrivateSpotInput } from '@/validators/private-spot.schema';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
 export default function NewPrivateSpotPage() {
   const router = useRouter();
   const createSpot = useCreatePrivateSpot();
   const addToast = useNotificationStore((s) => s.addToast);
   const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(null);
+
+  const mapStyle = useMemo(() => getDefaultVectorStyle(), []);
 
   const handleMapClick = useCallback((e: MapMouseEvent) => {
     const { lat, lng } = e.lngLat;
@@ -64,13 +67,12 @@ export default function NewPrivateSpotPage() {
             </label>
             <div className="h-[400px] rounded-lg overflow-hidden border">
               <Map
-                mapboxAccessToken={MAPBOX_TOKEN}
                 initialViewState={{
                   latitude: DEFAULT_CENTER.latitude,
                   longitude: DEFAULT_CENTER.longitude,
                   zoom: 6,
                 }}
-                mapStyle={MAP_STYLES.outdoors}
+                mapStyle={mapStyle}
                 style={{ width: '100%', height: '100%' }}
                 onClick={handleMapClick}
                 maxBounds={[[-10, 40], [12, 52]]}

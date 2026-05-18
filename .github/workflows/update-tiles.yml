@@ -1,0 +1,77 @@
+name: Update PMTiles (France)
+
+# Reconstruit l'extrait France des tuiles Protomaps depuis le planet PMTiles
+# quotidien, puis pousse vers Vercel Blob.
+#
+# Déclencheurs :
+#   - Cron mensuel (1er du mois à 03:00 UTC)
+#   - Manuel via workflow_dispatch
+#
+# Secret GitHub requis :
+#   - BLOB_READ_WRITE_TOKEN  (copier depuis Vercel dashboard → Project → Storage → Blob)
+#
+# Voir docs/ops/pmtiles-vercel-blob-setup.md pour le setup initial.
+
+on:
+  schedule:
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+    inputs:
+      planet_date:
+        description: 'Date du planet PMTiles à utiliser (YYYYMMDD). Laisser vide pour la veille UTC.'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install pmtiles CLI
+        run: go install github.com/protomaps/go-pmtiles@latest
+
+      - name: Resolve planet date
+        id: planet
+        run: |
+          if [ -n "${{ inputs.planet_date }}" ]; then
+            echo "date=${{ inputs.planet_date }}" >> "$GITHUB_OUTPUT"
+          else
+            # Yesterday UTC — the daily build is usually published with ~24h delay
+            echo "date=$(date -u -d 'yesterday' +%Y%m%d)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Extract France from planet PMTiles
+        run: |
+          mkdir -p tiles
+          # France métropolitaine + Corse : bbox approximatif
+          pmtiles extract \
+            "https://build.protomaps.com/${{ steps.planet.outputs.date }}.pmtiles" \
+            tiles/france.pmtiles \
+            --bbox=-5.5,41.3,9.7,51.2
+          ls -lh tiles/france.pmtiles
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci --ignore-scripts
+
+      - name: Upload to Vercel Blob
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+        run: npm run upload-tiles -- ./tiles/france.pmtiles --key=france.pmtiles

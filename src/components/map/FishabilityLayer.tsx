@@ -1,6 +1,6 @@
 'use client';
 
-import { Source, Layer } from 'react-map-gl/mapbox';
+import { Source, Layer } from 'react-map-gl/maplibre';
 import { useMemo } from 'react';
 import type { SpotListItem } from '@/types/spot';
 import type { GeoJSONFeatureCollection } from '@/types/map';

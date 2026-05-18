@@ -1,18 +1,18 @@
 'use client';
 
-import { Map, Layers, Crosshair } from 'lucide-react';
+import { Map, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMapStore } from '@/store/map.store';
-import { MAP_STYLES } from '@/lib/mapbox';
+import { MAP_STYLE_KEYS, type MapStyleKey } from '@/lib/map';
 import { useState } from 'react';
 import type { MapLayer } from '@/types/map';
 
 interface MapControlsProps {
-  mapStyle: string;
-  onStyleChange: (style: string) => void;
+  styleKey: MapStyleKey;
+  onStyleChange: (next: MapStyleKey) => void;
 }
 
-export function MapControls({ mapStyle, onStyleChange }: MapControlsProps) {
+export function MapControls({ styleKey, onStyleChange }: MapControlsProps) {
   const toggleLayer = useMapStore((s) => s.toggleLayer);
   const activeLayers = useMapStore((s) => s.activeLayers);
   const [showLayers, setShowLayers] = useState(false);
@@ -31,10 +31,12 @@ export function MapControls({ mapStyle, onStyleChange }: MapControlsProps) {
         size="icon"
         className="bg-background shadow-md"
         onClick={() => {
-          const nextStyle = mapStyle === MAP_STYLES.outdoors ? MAP_STYLES.satellite : MAP_STYLES.outdoors;
-          onStyleChange(nextStyle);
+          onStyleChange(
+            styleKey === MAP_STYLE_KEYS.vector ? MAP_STYLE_KEYS.satellite : MAP_STYLE_KEYS.vector,
+          );
         }}
-        aria-label="Changer le style de carte"
+        aria-label={styleKey === MAP_STYLE_KEYS.vector ? 'Passer en vue satellite' : 'Passer en vue carte'}
+        aria-pressed={styleKey === MAP_STYLE_KEYS.satellite}
       >
         <Map className="h-4 w-4" />
       </Button>

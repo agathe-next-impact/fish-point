@@ -51,23 +51,11 @@ self.addEventListener('fetch', (event) => {
 
   if (event.request.method !== 'GET') return;
 
-  // Cache First for map tiles (with size limit)
-  if (url.hostname.includes('mapbox')) {
-    event.respondWith(
-      caches.match(event.request).then((cached) => {
-        if (cached) return cached;
-        return fetch(event.request).then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(TILES_CACHE).then((cache) => {
-              cache.put(event.request, clone);
-              trimCache(TILES_CACHE, MAX_TILES_ENTRIES);
-            });
-          }
-          return response;
-        });
-      })
-    );
+  // PMTiles on Vercel Blob: bypass SW cache and let the browser HTTP cache handle it.
+  // The Cache API does not properly store 206 Partial Content responses (PMTiles
+  // fetches use HTTP Range requests). The Cache-Control: max-age=31536000 on the
+  // Blob object is sufficient — browser caches it natively without our help.
+  if (url.hostname.endsWith('.public.blob.vercel-storage.com')) {
     return;
   }
 

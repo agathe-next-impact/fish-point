@@ -1,4 +1,7 @@
-import 'dotenv/config';
+import { config as loadEnv } from 'dotenv';
+loadEnv();
+loadEnv({ path: '.env.local', override: true });
+
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { FISHBASE_DATA } from '../src/config/fishbase-data';

@@ -3,17 +3,19 @@
 import { use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Map, { Marker, NavigationControl } from 'react-map-gl/mapbox';
-import { MapPin, Star, Fish, Anchor, Flag, Lock, ArrowLeft, Trash2, Pencil } from 'lucide-react';
+import { useMemo } from 'react';
+import Map, { Marker } from 'react-map-gl/maplibre';
+import { MapPin, Star, Fish, Anchor, Flag, Lock, ArrowLeft, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VisitLog } from '@/components/private-spots/VisitLog';
 import { usePrivateSpot, useDeletePrivateSpot, useLogVisit } from '@/hooks/usePrivateSpots';
 import { useNotificationStore } from '@/store/notification.store';
-import { MAPBOX_TOKEN, MAP_STYLES } from '@/lib/mapbox';
+import { getDefaultVectorStyle } from '@/lib/map';
+import '@/lib/map-runtime';
 import type { CreateVisitInput } from '@/validators/private-spot.schema';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
 function getIconComponent(icon: string | null) {
   switch (icon) {
@@ -33,6 +35,8 @@ export default function PrivateSpotDetailPage({ params }: { params: Promise<{ id
   const { data, isLoading } = usePrivateSpot(id);
   const deleteSpot = useDeletePrivateSpot();
   const logVisitMutation = useLogVisit(id);
+
+  const mapStyle = useMemo(() => getDefaultVectorStyle(), []);
 
   const spot = data?.data;
 
@@ -159,13 +163,12 @@ export default function PrivateSpotDetailPage({ params }: { params: Promise<{ id
             {/* Mini map */}
             <div className="h-64 rounded-lg overflow-hidden border">
               <Map
-                mapboxAccessToken={MAPBOX_TOKEN}
                 initialViewState={{
                   latitude: spot.latitude,
                   longitude: spot.longitude,
                   zoom: 13,
                 }}
-                mapStyle={MAP_STYLES.outdoors}
+                mapStyle={mapStyle}
                 style={{ width: '100%', height: '100%' }}
                 interactive={false}
               >
