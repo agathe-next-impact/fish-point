@@ -343,6 +343,7 @@ enum WaterType {
   RIVER
   LAKE
   POND
+  RESERVOIR
   SEA
   CANAL
   STREAM
