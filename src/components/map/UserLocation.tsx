@@ -1,6 +1,6 @@
 'use client';
 
-import { Marker } from 'react-map-gl';
+import { Marker } from 'react-map-gl/mapbox';
 import { useGeolocation } from '@/hooks/useGeolocation';
 
 export function UserLocation() {

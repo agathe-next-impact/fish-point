@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { createSpotSchema, type CreateSpotInput } from '@/validators/spot.schema';
+import { z } from 'zod';
+import { createSpotSchema } from '@/validators/spot.schema';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -14,13 +15,16 @@ import { WATER_TYPE_LABELS, FISHING_TYPE_LABELS } from '@/lib/constants';
 
 const STEPS = ['Localisation', 'Informations', 'Espèces', 'Photos', 'Validation'];
 
+type SpotFormInput = z.input<typeof createSpotSchema>;
+type SpotFormOutput = z.output<typeof createSpotSchema>;
+
 export function SpotForm() {
   const [step, setStep] = useState(0);
   const router = useRouter();
   const createSpot = useCreateSpot();
   const addToast = useNotificationStore((s) => s.addToast);
 
-  const form = useForm<CreateSpotInput>({
+  const form = useForm<SpotFormInput, unknown, SpotFormOutput>({
     resolver: zodResolver(createSpotSchema),
     defaultValues: {
       name: '',
@@ -37,7 +41,7 @@ export function SpotForm() {
   const { register, handleSubmit, formState: { errors }, setValue, watch } = form;
   const selectedFishingTypes = watch('fishingTypes');
 
-  const onSubmit = async (data: CreateSpotInput) => {
+  const onSubmit = async (data: SpotFormOutput) => {
     try {
       const result = await createSpot.mutateAsync(data);
       addToast({ type: 'success', title: 'Spot soumis avec succès !' });
@@ -54,7 +58,7 @@ export function SpotForm() {
     const updated = current.includes(type as never)
       ? current.filter((t) => t !== type)
       : [...current, type];
-    setValue('fishingTypes', updated as CreateSpotInput['fishingTypes']);
+    setValue('fishingTypes', updated as SpotFormInput['fishingTypes']);
   };
 
   return (

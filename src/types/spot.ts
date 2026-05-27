@@ -1,4 +1,4 @@
-import type { WaterType, WaterCategory, FishingType, SpotStatus, Abundance } from '@prisma/client';
+import type { WaterType, WaterCategory, FishingType, SpotStatus, Abundance } from '@/generated/prisma/client';
 
 export type { WaterType, WaterCategory, FishingType, SpotStatus, Abundance };
 

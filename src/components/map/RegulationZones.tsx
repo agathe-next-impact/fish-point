@@ -1,6 +1,6 @@
 'use client';
 
-import { Source, Layer } from 'react-map-gl';
+import { Source, Layer } from 'react-map-gl/mapbox';
 
 const REGULATION_GEOJSON = {
   type: 'FeatureCollection' as const,

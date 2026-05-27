@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import Map, { NavigationControl, GeolocateControl, type MapRef, type ViewStateChangeEvent } from 'react-map-gl';
+import Map, { NavigationControl, GeolocateControl, type MapRef, type ViewStateChangeEvent } from 'react-map-gl/mapbox';
 import { useMapStore } from '@/store/map.store';
 import { MAPBOX_TOKEN, MAP_STYLES, DEFAULT_CENTER } from '@/lib/mapbox';
 import { SpotCluster } from './SpotCluster';

@@ -5,6 +5,8 @@ import { generateSpotMetadata } from '@/config/seo';
 import type { Metadata } from 'next';
 import type { SpotDetail as SpotDetailType } from '@/types/spot';
 
+export const dynamic = 'force-dynamic';
+
 interface SpotPageProps {
   params: Promise<{ slug: string }>;
 }
@@ -81,5 +83,3 @@ export default async function SpotPage({ params }: SpotPageProps) {
     </div>
   );
 }
-
-export const revalidate = 3600;

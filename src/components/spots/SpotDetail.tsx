@@ -2,9 +2,9 @@
 
 import { Star, MapPin, Check, Share2, Heart, Navigation, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { WATER_TYPE_LABELS, FISHING_TYPE_LABELS, ABUNDANCE_LABELS } from '@/lib/constants';
-import { formatDate } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 import { SpotGallery } from './SpotGallery';
 import { SpotRegulations } from './SpotRegulations';
 import { SpotWeather } from './SpotWeather';
@@ -121,15 +121,14 @@ export function SpotDetail({ spot }: SpotDetailProps) {
             <p className="text-sm text-muted-foreground font-mono">
               {spot.latitude.toFixed(6)}, {spot.longitude.toFixed(6)}
             </p>
-            <Button variant="outline" size="sm" className="w-full mt-2" asChild>
-              <a
-                href={`https://www.google.com/maps/dir/?api=1&destination=${spot.latitude},${spot.longitude}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Navigation className="h-4 w-4 mr-1" /> Itinéraire
-              </a>
-            </Button>
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${spot.latitude},${spot.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'w-full mt-2')}
+            >
+              <Navigation className="h-4 w-4 mr-1" /> Itinéraire
+            </a>
           </div>
 
           <p className="text-xs text-muted-foreground">

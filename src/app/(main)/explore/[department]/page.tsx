@@ -1,16 +1,14 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { SpotCard } from '@/components/spots/SpotCard';
-import { getDepartmentByCode, DEPARTMENTS } from '@/config/departments';
+import { getDepartmentByCode } from '@/config/departments';
 import { generateDepartmentMetadata } from '@/config/seo';
 import type { Metadata } from 'next';
 
+export const dynamic = 'force-dynamic';
+
 interface DepartmentPageProps {
   params: Promise<{ department: string }>;
-}
-
-export async function generateStaticParams() {
-  return DEPARTMENTS.map((d) => ({ department: d.code }));
 }
 
 export async function generateMetadata({ params }: DepartmentPageProps): Promise<Metadata> {

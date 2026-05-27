@@ -2,6 +2,8 @@ import { prisma } from '@/lib/prisma';
 import { SpotCard } from '@/components/spots/SpotCard';
 import type { Metadata } from 'next';
 
+export const dynamic = 'force-dynamic';
+
 interface CommunePageProps {
   params: Promise<{ department: string; commune: string }>;
 }
@@ -45,5 +47,3 @@ export default async function CommunePage({ params }: CommunePageProps) {
     </div>
   );
 }
-
-export const revalidate = 86400;

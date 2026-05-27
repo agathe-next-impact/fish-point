@@ -1,4 +1,4 @@
-import type { FishCategory } from '@prisma/client';
+import type { FishCategory } from '@/generated/prisma/client';
 
 export interface FishSpeciesConfig {
   name: string;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useCallback } from 'react';
-import { Marker } from 'react-map-gl';
+import { Marker } from 'react-map-gl/mapbox';
 import Supercluster from 'supercluster';
 import { useMapStore } from '@/store/map.store';
 import { SpotMarker } from './SpotMarker';
