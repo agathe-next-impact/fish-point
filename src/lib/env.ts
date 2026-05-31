@@ -7,7 +7,6 @@ const envSchema = z.object({
   AUTH_SECRET: z.string().min(1).optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
-  NEXT_PUBLIC_MAPBOX_TOKEN: z.string().optional(),
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
   R2_ACCOUNT_ID: z.string().optional(),

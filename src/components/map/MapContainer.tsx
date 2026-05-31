@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import Map, { NavigationControl, GeolocateControl, type MapRef, type ViewStateChangeEvent } from 'react-map-gl/mapbox';
+import Map, { NavigationControl, GeolocateControl, type MapRef, type ViewStateChangeEvent } from 'react-map-gl/maplibre';
 import { useMapStore } from '@/store/map.store';
-import { MAPBOX_TOKEN, MAP_STYLES, DEFAULT_CENTER } from '@/lib/mapbox';
+import { MAP_STYLES, DEFAULT_CENTER } from '@/lib/map-config';
 import { SpotCluster } from './SpotCluster';
 import { MapControls } from './MapControls';
 import { MapFilters } from './MapFilters';
@@ -11,7 +11,6 @@ import { UserLocation } from './UserLocation';
 import { HeatmapLayer } from './HeatmapLayer';
 import { RegulationZones } from './RegulationZones';
 import type { SpotListItem } from '@/types/spot';
-import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface MapContainerProps {
   spots?: SpotListItem[];
@@ -24,7 +23,7 @@ export function MapContainer({ spots = [], onSpotClick, className }: MapContaine
   const viewport = useMapStore((s) => s.viewport);
   const setViewport = useMapStore((s) => s.setViewport);
   const activeLayers = useMapStore((s) => s.activeLayers);
-  const [mapStyle, setMapStyle] = useState<string>(MAP_STYLES.outdoors);
+  const [mapStyle, setMapStyle] = useState<string>(MAP_STYLES.liberty);
 
   const handleMove = useCallback(
     (evt: ViewStateChangeEvent) => {
@@ -45,7 +44,6 @@ export function MapContainer({ spots = [], onSpotClick, className }: MapContaine
     <div className={className || 'relative w-full h-full'}>
       <Map
         ref={mapRef}
-        mapboxAccessToken={MAPBOX_TOKEN}
         initialViewState={{
           latitude: viewport.latitude || DEFAULT_CENTER.latitude,
           longitude: viewport.longitude || DEFAULT_CENTER.longitude,

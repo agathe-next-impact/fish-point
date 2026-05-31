@@ -3,7 +3,7 @@
 import { Map, Layers, Crosshair } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMapStore } from '@/store/map.store';
-import { MAP_STYLES } from '@/lib/mapbox';
+import { MAP_STYLES } from '@/lib/map-config';
 import { useState } from 'react';
 import type { MapLayer } from '@/types/map';
 
@@ -30,7 +30,7 @@ export function MapControls({ mapStyle, onStyleChange }: MapControlsProps) {
         size="icon"
         className="bg-background shadow-md"
         onClick={() => {
-          const nextStyle = mapStyle === MAP_STYLES.outdoors ? MAP_STYLES.satellite : MAP_STYLES.outdoors;
+          const nextStyle = mapStyle === MAP_STYLES.liberty ? MAP_STYLES.dark : MAP_STYLES.liberty;
           onStyleChange(nextStyle);
         }}
         aria-label="Changer le style de carte"

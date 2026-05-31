@@ -4,7 +4,7 @@ import { Star, MapPin, Navigation } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { WATER_TYPE_LABELS } from '@/lib/constants';
-import { formatDistance } from '@/lib/mapbox';
+import { formatDistance } from '@/lib/map-config';
 import type { SpotListItem } from '@/types/spot';
 
 interface SpotCardProps {

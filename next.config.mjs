@@ -12,7 +12,11 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**.mapbox.com',
+        hostname: '**.basemaps.cartocdn.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'tile.openstreetmap.org',
       },
       {
         protocol: 'https',

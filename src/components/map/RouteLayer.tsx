@@ -1,6 +1,6 @@
 'use client';
 
-import { Source, Layer } from 'react-map-gl/mapbox';
+import { Source, Layer } from 'react-map-gl/maplibre';
 
 interface RouteLayerProps {
   coordinates: [number, number][];
