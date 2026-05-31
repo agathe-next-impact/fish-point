@@ -5,8 +5,9 @@ loadEnv({ path: '.env.local', override: true });
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { FISHBASE_DATA } from '../src/config/fishbase-data';
+import { getDatabaseUrl } from '../src/lib/database-url';
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg({ connectionString: getDatabaseUrl() });
 const prisma = new PrismaClient({ adapter });
 
 const FISH_SPECIES = [

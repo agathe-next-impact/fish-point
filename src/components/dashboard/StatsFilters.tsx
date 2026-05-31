@@ -20,36 +20,26 @@ interface StatsFiltersProps {
 }
 
 export function StatsFilters({ filters, onChange }: StatsFiltersProps) {
-  const { data: speciesData } = useQuery({
-    queryKey: ['dashboard-filter-species'],
-    queryFn: async (): Promise<Species[]> => {
+  const { data: filterData } = useQuery({
+    queryKey: ['dashboard-filters'],
+    queryFn: async (): Promise<{ species: Species[]; spots: Spot[] }> => {
       const res = await fetch('/api/catches?limit=100');
-      if (!res.ok) return [];
+      if (!res.ok) return { species: [], spots: [] };
       const json = await res.json();
       const speciesMap = new Map<string, string>();
+      const spotMap = new Map<string, string>();
       for (const c of json.data || []) {
         if (c.species?.id && c.species?.name) {
           speciesMap.set(c.species.id, c.species.name);
         }
-      }
-      return Array.from(speciesMap.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
-    },
-    staleTime: 600000,
-  });
-
-  const { data: spotsData } = useQuery({
-    queryKey: ['dashboard-filter-spots'],
-    queryFn: async (): Promise<Spot[]> => {
-      const res = await fetch('/api/catches?limit=100');
-      if (!res.ok) return [];
-      const json = await res.json();
-      const spotMap = new Map<string, string>();
-      for (const c of json.data || []) {
         if (c.spot?.id && c.spot?.name) {
           spotMap.set(c.spot.id, c.spot.name);
         }
       }
-      return Array.from(spotMap.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+      return {
+        species: Array.from(speciesMap.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
+        spots: Array.from(spotMap.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
+      };
     },
     staleTime: 600000,
   });
@@ -68,7 +58,7 @@ export function StatsFilters({ filters, onChange }: StatsFiltersProps) {
           }
         >
           <option value="">Toutes les especes</option>
-          {speciesData?.map((s) => (
+          {filterData?.species.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
             </option>
@@ -88,7 +78,7 @@ export function StatsFilters({ filters, onChange }: StatsFiltersProps) {
           }
         >
           <option value="">Tous les spots</option>
-          {spotsData?.map((s) => (
+          {filterData?.spots.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
             </option>

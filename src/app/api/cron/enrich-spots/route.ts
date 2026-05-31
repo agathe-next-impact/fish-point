@@ -8,6 +8,21 @@ import { fetchAspeDetailedObservations } from '@/services/hubeau-poisson.service
 
 export const maxDuration = 300;
 
+async function processWithConcurrency<T>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<void>,
+) {
+  let index = 0;
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (index < items.length) {
+      const item = items[index++];
+      await worker(item);
+    }
+  });
+  await Promise.all(workers);
+}
+
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -64,7 +79,7 @@ export async function GET(request: NextRequest) {
       });
 
       let bioSynced = 0;
-      for (const spot of spotsWithHydrobio) {
+      await processWithConcurrency(spotsWithHydrobio, 6, async (spot) => {
         try {
           const indices = await fetchBiologicalIndices(spot.hydrobioStationCode!);
           for (const idx of indices) {
@@ -91,7 +106,7 @@ export async function GET(request: NextRequest) {
         } catch {
           // Non-critical
         }
-      }
+      });
       results.hydrobio = { processed: spotsWithHydrobio.length, synced: bioSynced };
     }
 
@@ -109,7 +124,7 @@ export async function GET(request: NextRequest) {
       });
 
       let aspeEnriched = 0;
-      for (const spot of spotsWithExtId) {
+      await processWithConcurrency(spotsWithExtId, 6, async (spot) => {
         try {
           const stationCode = spot.externalId!.replace('hubeau_poisson_', '');
           const detailed = await fetchAspeDetailedObservations(stationCode);
@@ -127,7 +142,7 @@ export async function GET(request: NextRequest) {
         } catch {
           // Non-critical
         }
-      }
+      });
       results.aspe = { processed: spotsWithExtId.length, enriched: aspeEnriched };
     }
 
@@ -170,7 +185,7 @@ export async function GET(request: NextRequest) {
       });
 
       let accessDetected = 0;
-      for (const spot of spotsWithoutAccess) {
+      await processWithConcurrency(spotsWithoutAccess, 5, async (spot) => {
         try {
           const result = await detectAccessType({
             latitude: spot.latitude,
@@ -196,7 +211,7 @@ export async function GET(request: NextRequest) {
         } catch {
           // Non-critical
         }
-      }
+      });
       results.access = { processed: spotsWithoutAccess.length, detected: accessDetected };
     }
 

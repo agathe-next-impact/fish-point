@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCached } from '@/lib/redis';
 import { searchRateLimit, checkRateLimit } from '@/lib/rate-limit';
+import { spotListSelect, toSpotListItem } from '@/lib/spot-list-select';
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,30 +31,12 @@ export async function GET(request: NextRequest) {
             { department: { contains: q, mode: 'insensitive' } },
           ],
         },
-        include: {
-          images: { where: { isPrimary: true }, take: 1 },
-        },
+        select: spotListSelect,
         take: limit,
         orderBy: { averageRating: 'desc' },
       });
 
-      return spots.map((spot) => ({
-        id: spot.id,
-        slug: spot.slug,
-        name: spot.name,
-        latitude: spot.latitude,
-        longitude: spot.longitude,
-        department: spot.department,
-        commune: spot.commune,
-        waterType: spot.waterType,
-        waterCategory: spot.waterCategory,
-        fishingTypes: spot.fishingTypes,
-        averageRating: spot.averageRating,
-        reviewCount: spot.reviewCount,
-        isPremium: spot.isPremium,
-        isVerified: spot.isVerified,
-        primaryImage: spot.images[0]?.url || null,
-      }));
+      return spots.map(toSpotListItem);
     }, 300);
 
     return NextResponse.json({ data }, {

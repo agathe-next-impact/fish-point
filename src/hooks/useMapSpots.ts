@@ -26,7 +26,7 @@ async function fetchBboxSpots(bounds: MapBounds): Promise<SpotListItem[]> {
     south: bounds.south.toString(),
     east: bounds.east.toString(),
     west: bounds.west.toString(),
-    limit: '500',
+    limit: '300',
   });
 
   const res = await fetch(`/api/spots/bbox?${params}`);
@@ -50,6 +50,7 @@ export function useMapSpots() {
     queryFn: () => fetchBboxSpots(debouncedBounds!),
     enabled: debouncedBounds !== null,
     placeholderData: keepPreviousData,
+    staleTime: 2 * 60 * 1000,
   });
 
   return {

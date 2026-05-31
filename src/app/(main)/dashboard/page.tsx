@@ -24,22 +24,19 @@ const ProgressionChart = dynamic(
   { loading: () => <Skeleton className="h-100" /> },
 );
 import {
-  useCatchesByHour,
-  useCatchesByBait,
-  useCatchesByWeather,
-  useCatchesBySpecies,
-  useProgression,
+  useDashboardSummary,
 } from '@/hooks/useDashboard';
 import type { DashboardFilters } from '@/services/dashboard.service';
 
 export default function DashboardPage() {
   const [filters, setFilters] = useState<DashboardFilters>({});
 
-  const { data: hourData, isLoading: hourLoading } = useCatchesByHour(filters);
-  const { data: baitData, isLoading: baitLoading } = useCatchesByBait(filters);
-  const { data: weatherData, isLoading: weatherLoading } = useCatchesByWeather(filters);
-  const { data: speciesData, isLoading: speciesLoading } = useCatchesBySpecies(filters);
-  const { data: progressionData, isLoading: progressionLoading } = useProgression(filters);
+  const { data: dashboardData, isLoading } = useDashboardSummary(filters);
+  const hourData = dashboardData?.hour;
+  const baitData = dashboardData?.bait;
+  const weatherData = dashboardData?.weather;
+  const speciesData = dashboardData?.species;
+  const progressionData = dashboardData?.progression;
 
   const stats = useMemo(() => {
     const totalCatches = speciesData?.reduce((sum, s) => sum + s.count, 0) || 0;
@@ -56,17 +53,15 @@ export default function DashboardPage() {
 
     const mostCaughtSpecies = speciesData?.[0];
 
-    const avgWeight =
-      speciesData && speciesData.length > 0
-        ? speciesData.reduce((sum, s) => {
-            if (s.avgWeight !== null) return sum + s.avgWeight * s.count;
-            return sum;
-          }, 0) /
-          speciesData.reduce((sum, s) => {
-            if (s.avgWeight !== null) return sum + s.count;
-            return sum;
-          }, 0)
-        : 0;
+    const avgWeightNumerator = speciesData?.reduce((sum, s) => {
+      if (s.avgWeight !== null) return sum + s.avgWeight * s.count;
+      return sum;
+    }, 0) ?? 0;
+    const avgWeightDenominator = speciesData?.reduce((sum, s) => {
+      if (s.avgWeight !== null) return sum + s.count;
+      return sum;
+    }, 0) ?? 0;
+    const avgWeight = avgWeightDenominator > 0 ? avgWeightNumerator / avgWeightDenominator : 0;
 
     return {
       totalCatches,
@@ -89,7 +84,7 @@ export default function DashboardPage() {
       <h1 className="mb-6 text-2xl font-bold">Tableau de bord</h1>
 
       {/* Stat Cards */}
-      {speciesLoading ? (
+      {isLoading ? (
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-30" />
@@ -129,25 +124,25 @@ export default function DashboardPage() {
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {hourLoading ? (
+        {isLoading ? (
           <Skeleton className="h-100" />
         ) : (
           hourData && <CatchesByHourChart data={hourData} />
         )}
 
-        {baitLoading ? (
+        {isLoading ? (
           <Skeleton className="h-100" />
         ) : (
           baitData && <BaitSuccessChart data={baitData} />
         )}
 
-        {weatherLoading ? (
+        {isLoading ? (
           <Skeleton className="h-100" />
         ) : (
           weatherData && <WeatherCorrelation data={weatherData} />
         )}
 
-        {progressionLoading ? (
+        {isLoading ? (
           <Skeleton className="h-100" />
         ) : (
           progressionData && <ProgressionChart data={progressionData} />

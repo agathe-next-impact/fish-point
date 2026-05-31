@@ -29,7 +29,7 @@ export default function SpotsPage() {
     accessType: gridFilters.accessType,
     minFishabilityScore: gridFilters.minFishabilityScore,
     maxFishabilityScore: gridFilters.maxFishabilityScore,
-    limit: 500,
+    limit: 60,
   }), [debouncedSearch, gridFilters]);
 
   const {

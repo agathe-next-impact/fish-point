@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
-import { createSpotSchema, spotFiltersSchema } from '@/validators/spot.schema';
+import { createSpotSchema } from '@/validators/spot.schema';
 import { slugify } from '@/lib/utils';
 import { resolveDepartment } from '@/services/geocoding.service';
+import { spotListSelect, toSpotListItem } from '@/lib/spot-list-select';
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
     });
 
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 500);
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
     const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = { status: 'APPROVED' };
@@ -75,9 +76,7 @@ export async function GET(request: NextRequest) {
     const [spots, total] = await Promise.all([
       prisma.spot.findMany({
         where,
-        include: {
-          images: { where: { isPrimary: true }, take: 1 },
-        },
+        select: spotListSelect,
         orderBy: { averageRating: 'desc' },
         skip,
         take: limit,
@@ -85,26 +84,7 @@ export async function GET(request: NextRequest) {
       prisma.spot.count({ where }),
     ]);
 
-    const data = spots.map((spot) => ({
-      id: spot.id,
-      slug: spot.slug,
-      name: spot.name,
-      latitude: spot.latitude,
-      longitude: spot.longitude,
-      department: spot.department,
-      commune: spot.commune,
-      waterType: spot.waterType,
-      waterCategory: spot.waterCategory,
-      fishingTypes: spot.fishingTypes,
-      averageRating: spot.averageRating,
-      reviewCount: spot.reviewCount,
-      isPremium: spot.isPremium,
-      isVerified: spot.isVerified,
-      primaryImage: spot.images[0]?.url || null,
-      fishabilityScore: spot.fishabilityScore,
-      dataOrigin: spot.dataOrigin,
-      accessType: spot.accessType,
-    }));
+    const data = spots.map(toSpotListItem);
 
     return NextResponse.json({
       data,
