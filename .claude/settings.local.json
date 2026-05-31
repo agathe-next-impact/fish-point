@@ -6,7 +6,10 @@
       "Bash(xargs grep:*)",
       "Bash(ls -la /c/dev/fish-point/src/app/api/spots/[id]/)",
       "Bash(xargs basename:*)",
-      "Bash(xargs -I {} basename {})"
+      "Bash(xargs -I {} basename {})",
+      "Bash(Get-ChildItem -Path \"C:\\\\dev\\\\fish-point\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); const d={...p.dependencies,...p.devDependencies}; ['tailwindcss','@tailwindcss/postcss','next','react','autoprefixer','postcss'].forEach\\(k=>console.log\\(k, d[k]||'\\(absent\\)'\\)\\)\")"
     ]
   }
 }
