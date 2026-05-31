@@ -1,6 +1,6 @@
 'use client';
 
-import { Star, User } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { formatRelativeTime, getInitials } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 

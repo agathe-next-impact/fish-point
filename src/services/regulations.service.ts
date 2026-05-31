@@ -1,4 +1,4 @@
-import type { RegulationData, DepartmentRegulation, RegulationAlert } from '@/types/regulation';
+import type { RegulationData, RegulationAlert } from '@/types/regulation';
 import { getRegulationStatus } from '@/config/regulations';
 
 export function determineSpotStatus(

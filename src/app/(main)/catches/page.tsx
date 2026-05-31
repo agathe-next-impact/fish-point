@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { CatchTimeline } from '@/components/catches/CatchTimeline';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery } from '@tanstack/react-query';
-import type { CatchData } from '@/types/catch';
 
 export default function CatchesPage() {
   const { data, isLoading } = useQuery({

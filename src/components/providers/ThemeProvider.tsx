@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import { useUserStore } from '@/store/user.store';
 
 type Theme = 'light' | 'dark';
@@ -13,18 +13,27 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
+function subscribeToSystemTheme(callback: () => void) {
+  if (typeof window === 'undefined') return () => {};
+
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  mediaQuery.addEventListener('change', callback);
+  return () => mediaQuery.removeEventListener('change', callback);
+}
+
+function getSystemTheme(): Theme {
+  if (typeof window === 'undefined') return 'light';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function getServerSystemTheme(): Theme {
+  return 'light';
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const preference = useUserStore((s) => s.preferences.theme);
-  const [theme, setThemeState] = useState<Theme>('light');
-
-  useEffect(() => {
-    if (preference === 'system') {
-      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setThemeState(systemDark ? 'dark' : 'light');
-    } else {
-      setThemeState(preference);
-    }
-  }, [preference]);
+  const systemTheme = useSyncExternalStore(subscribeToSystemTheme, getSystemTheme, getServerSystemTheme);
+  const theme: Theme = preference === 'dark' ? 'dark' : preference === 'light' ? 'light' : systemTheme;
 
   useEffect(() => {
     const root = document.documentElement;
@@ -33,7 +42,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme]);
 
   const setTheme = (t: Theme) => {
-    setThemeState(t);
     useUserStore.getState().setPreference('theme', t);
   };
 

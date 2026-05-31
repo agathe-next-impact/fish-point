@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
-import { Inter, JetBrains_Mono, Geist } from 'next/font/google';
+import { JetBrains_Mono, Geist } from 'next/font/google';
 import { DEFAULT_METADATA } from '@/config/seo';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { QueryProvider } from '@/components/providers/QueryProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { GeolocationProvider } from '@/components/providers/GeolocationProvider';
+import { ServiceWorkerProvider } from '@/components/providers/ServiceWorkerProvider';
 import { ToastContainer } from '@/components/ui/toast';
 import './globals.css';
 import { cn } from "@/lib/utils";
@@ -27,8 +28,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <QueryProvider>
             <ThemeProvider>
               <GeolocationProvider>
-                {children}
-                <ToastContainer />
+                <ServiceWorkerProvider>
+                  {children}
+                  <ToastContainer />
+                </ServiceWorkerProvider>
               </GeolocationProvider>
             </ThemeProvider>
           </QueryProvider>

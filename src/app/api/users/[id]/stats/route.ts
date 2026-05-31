@@ -8,7 +8,7 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const [user, catchCount, spotCount, reviewCount, biggestCatch, speciesStats] = await Promise.all([
+    const [user, catchCount, spotCount, reviewCount, biggestCatch, speciesStats, speciesGroups] = await Promise.all([
       prisma.user.findUnique({ where: { id }, select: { xp: true, level: true } }),
       prisma.catch.count({ where: { userId: id } }),
       prisma.spot.count({ where: { authorId: id } }),
@@ -25,6 +25,10 @@ export async function GET(
         orderBy: { _count: { speciesId: 'desc' } },
         take: 1,
       }),
+      prisma.catch.groupBy({
+        by: ['speciesId'],
+        where: { userId: id },
+      }),
     ]);
 
     let mostCaughtSpecies = null;
@@ -38,10 +42,12 @@ export async function GET(
         totalSpots: spotCount,
         totalCatches: catchCount,
         totalReviews: reviewCount,
+        totalSpecies: speciesGroups.length,
         xp: user?.xp || 0,
         level: user?.level || 1,
         biggestCatch,
         mostCaughtSpecies,
+        monthlyCatches: [],
       },
     });
   } catch (error) {

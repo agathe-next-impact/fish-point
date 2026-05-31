@@ -24,7 +24,11 @@ export function FishRecognition() {
           <p className="text-sm text-muted-foreground mb-3">
             Prenez une photo de votre poisson pour identifier l&apos;espèce
           </p>
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setResult({ name: 'Analyse en attente', confidence: 0 })}
+          >
             Prendre une photo
           </Button>
         </div>

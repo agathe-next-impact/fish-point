@@ -1,6 +1,6 @@
 'use client';
 
-import { Map, Layers, Crosshair } from 'lucide-react';
+import { Map, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMapStore } from '@/store/map.store';
 import { MAP_STYLES } from '@/lib/map-config';

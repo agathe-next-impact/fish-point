@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
@@ -38,8 +38,12 @@ export function SpotForm() {
     },
   });
 
-  const { register, handleSubmit, formState: { errors }, setValue, watch } = form;
-  const selectedFishingTypes = watch('fishingTypes');
+  const { register, handleSubmit, formState: { errors }, setValue, control } = form;
+  const selectedFishingTypes = useWatch({ control, name: 'fishingTypes' });
+  const watchedName = useWatch({ control, name: 'name' });
+  const watchedLatitude = useWatch({ control, name: 'latitude' });
+  const watchedLongitude = useWatch({ control, name: 'longitude' });
+  const watchedWaterType = useWatch({ control, name: 'waterType' });
 
   const onSubmit = async (data: SpotFormOutput) => {
     try {
@@ -179,10 +183,10 @@ export function SpotForm() {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Récapitulatif</h2>
             <div className="rounded-lg border p-4 space-y-2">
-              <p><strong>Nom :</strong> {watch('name')}</p>
-              <p><strong>Coordonnées :</strong> {watch('latitude')}, {watch('longitude')}</p>
-              <p><strong>Type d&apos;eau :</strong> {WATER_TYPE_LABELS[watch('waterType')]}</p>
-              <p><strong>Pêche :</strong> {watch('fishingTypes')?.map(t => FISHING_TYPE_LABELS[t]).join(', ')}</p>
+              <p><strong>Nom :</strong> {watchedName}</p>
+              <p><strong>Coordonnées :</strong> {watchedLatitude}, {watchedLongitude}</p>
+              <p><strong>Type d&apos;eau :</strong> {WATER_TYPE_LABELS[watchedWaterType]}</p>
+              <p><strong>Pêche :</strong> {selectedFishingTypes?.map((t) => FISHING_TYPE_LABELS[t]).join(', ')}</p>
             </div>
             <p className="text-sm text-muted-foreground">
               Votre spot sera soumis à modération avant d&apos;être visible sur la carte.

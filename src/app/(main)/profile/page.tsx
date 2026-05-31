@@ -6,9 +6,17 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Settings, MapPin, Fish, Star } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { getUserStats } from '@/services/catches.service';
 
 export default function ProfilePage() {
   const { data: session } = useSession();
+  const userId = session?.user?.id;
+  const { data: statsResponse } = useQuery({
+    queryKey: ['userStats', userId],
+    queryFn: () => getUserStats(userId!),
+    enabled: !!userId,
+  });
 
   if (!session?.user) {
     return (
@@ -34,9 +42,9 @@ export default function ProfilePage() {
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
-          { icon: MapPin, label: 'Spots', value: '0' },
-          { icon: Fish, label: 'Prises', value: '0' },
-          { icon: Star, label: 'Avis', value: '0' },
+          { icon: MapPin, label: 'Spots', value: statsResponse?.data?.totalSpots ?? 0 },
+          { icon: Fish, label: 'Prises', value: statsResponse?.data?.totalCatches ?? 0 },
+          { icon: Star, label: 'Avis', value: statsResponse?.data?.totalReviews ?? 0 },
         ].map((stat) => (
           <Card key={stat.label}>
             <CardContent className="p-4 text-center">

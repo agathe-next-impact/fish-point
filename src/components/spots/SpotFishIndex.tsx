@@ -2,7 +2,6 @@
 
 import { Fish } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 
 interface SpotFishIndexProps {
   spotId: string;
@@ -12,7 +11,7 @@ export function SpotFishIndex({ spotId }: SpotFishIndexProps) {
   // This would typically fetch from an API that calculates the fish index
   // For now, show a placeholder
   return (
-    <Card>
+    <Card data-spot-id={spotId}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center gap-2">
           <Fish className="h-4 w-4" />

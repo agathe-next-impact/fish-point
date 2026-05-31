@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { serializeSpotListItem, spotListSelect } from '@/server/spots';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,30 +21,12 @@ export async function GET(request: NextRequest) {
           { department: { contains: q, mode: 'insensitive' } },
         ],
       },
-      include: {
-        images: { where: { isPrimary: true }, take: 1 },
-      },
+      select: spotListSelect,
       take: limit,
       orderBy: { averageRating: 'desc' },
     });
 
-    const data = spots.map((spot) => ({
-      id: spot.id,
-      slug: spot.slug,
-      name: spot.name,
-      latitude: spot.latitude,
-      longitude: spot.longitude,
-      department: spot.department,
-      commune: spot.commune,
-      waterType: spot.waterType,
-      waterCategory: spot.waterCategory,
-      fishingTypes: spot.fishingTypes,
-      averageRating: spot.averageRating,
-      reviewCount: spot.reviewCount,
-      isPremium: spot.isPremium,
-      isVerified: spot.isVerified,
-      primaryImage: spot.images[0]?.url || null,
-    }));
+    const data = spots.map(serializeSpotListItem);
 
     return NextResponse.json({ data });
   } catch (error) {

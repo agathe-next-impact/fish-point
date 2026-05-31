@@ -53,7 +53,11 @@ export interface CatchFilters {
 }
 
 export interface UserCatchStats {
+  totalSpots: number;
   totalCatches: number;
+  totalReviews: number;
+  xp: number;
+  level: number;
   totalSpecies: number;
   biggestCatch: CatchData | null;
   mostCaughtSpecies: { name: string; count: number } | null;

@@ -62,13 +62,27 @@ export async function getNearbySpots(query: GeoSpotQuery): Promise<ApiResponse<S
     offset: (query.offset || 0).toString(),
   });
 
+  if (query.filters) {
+    Object.entries(query.filters).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      if (Array.isArray(value)) {
+        value.forEach((item) => params.append(key, String(item)));
+      } else {
+        params.set(key, String(value));
+      }
+    });
+  }
+
   const res = await fetch(`${BASE_URL}/nearby?${params}`);
   if (!res.ok) throw new Error('Failed to fetch nearby spots');
   return res.json();
 }
 
-export async function searchSpots(query: string): Promise<ApiResponse<SpotListItem[]>> {
-  const res = await fetch(`${BASE_URL}/search?q=${encodeURIComponent(query)}`);
+export async function searchSpots(query: string, limit?: number): Promise<ApiResponse<SpotListItem[]>> {
+  const params = new URLSearchParams({ q: query });
+  if (limit !== undefined) params.set('limit', String(limit));
+
+  const res = await fetch(`${BASE_URL}/search?${params}`);
   if (!res.ok) throw new Error('Failed to search spots');
   return res.json();
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
-import { updateSpotSchema } from '@/validators/spot.schema';
+import { authorUpdateSpotSchema } from '@/validators/spot.schema';
 
 export async function GET(
   request: NextRequest,
@@ -44,7 +44,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const validation = updateSpotSchema.safeParse(body);
+    const validation = authorUpdateSpotSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json(
         { error: 'Validation error', details: validation.error.flatten().fieldErrors },

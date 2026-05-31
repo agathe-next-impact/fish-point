@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, X, ExternalLink } from 'lucide-react';
+import { AlertTriangle, Check, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { REGULATION_TYPE_LABELS } from '@/lib/constants';
 import { formatRegulationPeriod } from '@/services/regulations.service';

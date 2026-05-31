@@ -94,6 +94,8 @@ export interface SpotCreateInput {
   description?: string;
   latitude: number;
   longitude: number;
+  department?: string;
+  commune?: string;
   waterType: WaterType;
   waterCategory?: WaterCategory;
   fishingTypes: FishingType[];

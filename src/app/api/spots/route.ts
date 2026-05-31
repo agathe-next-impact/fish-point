@@ -3,78 +3,42 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { createSpotSchema, spotFiltersSchema } from '@/validators/spot.schema';
 import { slugify } from '@/lib/utils';
+import { reverseGeocode } from '@/services/geocoding.service';
+import { buildApprovedSpotWhere, serializeSpotListItem, spotListSelect } from '@/server/spots';
+import { searchParamsToObject } from '@/lib/search-params';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const params: Record<string, string | string[]> = {};
-    searchParams.forEach((value, key) => {
-      const existing = params[key];
-      if (existing) {
-        params[key] = Array.isArray(existing) ? [...existing, value] : [existing, value];
-      } else {
-        params[key] = value;
-      }
-    });
+    const validation = spotFiltersSchema.safeParse(searchParamsToObject(searchParams));
 
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
-    const skip = (page - 1) * limit;
-
-    const where: Record<string, unknown> = { status: 'APPROVED' };
-
-    if (searchParams.get('department')) {
-      where.department = searchParams.get('department');
-    }
-    if (searchParams.get('waterType')) {
-      where.waterType = { in: searchParams.getAll('waterType') };
-    }
-    if (searchParams.get('search')) {
-      where.OR = [
-        { name: { contains: searchParams.get('search'), mode: 'insensitive' } },
-        { commune: { contains: searchParams.get('search'), mode: 'insensitive' } },
-      ];
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Validation error', details: validation.error.flatten().fieldErrors },
+        { status: 400 },
+      );
     }
 
-    const minRating = parseFloat(searchParams.get('minRating') || '0');
-    if (minRating > 0) {
-      where.averageRating = { gte: minRating };
-    }
+    const filters = validation.data;
+    const skip = (filters.page - 1) * filters.limit;
+    const where = buildApprovedSpotWhere(filters);
 
     const [spots, total] = await Promise.all([
       prisma.spot.findMany({
         where,
-        include: {
-          images: { where: { isPrimary: true }, take: 1 },
-        },
+        select: spotListSelect,
         orderBy: { averageRating: 'desc' },
         skip,
-        take: limit,
+        take: filters.limit,
       }),
       prisma.spot.count({ where }),
     ]);
 
-    const data = spots.map((spot) => ({
-      id: spot.id,
-      slug: spot.slug,
-      name: spot.name,
-      latitude: spot.latitude,
-      longitude: spot.longitude,
-      department: spot.department,
-      commune: spot.commune,
-      waterType: spot.waterType,
-      waterCategory: spot.waterCategory,
-      fishingTypes: spot.fishingTypes,
-      averageRating: spot.averageRating,
-      reviewCount: spot.reviewCount,
-      isPremium: spot.isPremium,
-      isVerified: spot.isVerified,
-      primaryImage: spot.images[0]?.url || null,
-    }));
+    const data = spots.map(serializeSpotListItem);
 
     return NextResponse.json({
       data,
-      meta: { total, page, limit, hasMore: skip + limit < total },
+      meta: { total, page: filters.page, limit: filters.limit, hasMore: skip + filters.limit < total },
     });
   } catch (error) {
     console.error('GET /api/spots error:', error);
@@ -100,6 +64,18 @@ export async function POST(request: NextRequest) {
 
     const data = validation.data;
     const slug = slugify(data.name) + '-' + Date.now().toString(36);
+    const geocoded = data.department
+      ? null
+      : await reverseGeocode(data.latitude, data.longitude);
+    const department = data.department ?? geocoded?.departmentCode ?? geocoded?.department;
+    const commune = data.commune ?? geocoded?.commune;
+
+    if (!department) {
+      return NextResponse.json(
+        { error: 'Unable to determine spot department from coordinates' },
+        { status: 400 },
+      );
+    }
 
     const spot = await prisma.spot.create({
       data: {
@@ -108,7 +84,8 @@ export async function POST(request: NextRequest) {
         description: data.description,
         latitude: data.latitude,
         longitude: data.longitude,
-        department: '',
+        department,
+        commune,
         waterType: data.waterType,
         waterCategory: data.waterCategory,
         fishingTypes: data.fishingTypes,

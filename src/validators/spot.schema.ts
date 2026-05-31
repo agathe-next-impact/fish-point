@@ -19,6 +19,20 @@ export const AbundanceEnum = z.enum([
   'RARE', 'LOW', 'MODERATE', 'HIGH', 'VERY_HIGH',
 ]);
 
+const optionalBooleanQuery = z.preprocess((value) => {
+  if (value === undefined) return undefined;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return value;
+}, z.boolean().optional());
+
+function optionalArrayQuery<T extends z.ZodType>(schema: T) {
+  return z.preprocess((value) => {
+    if (value === undefined) return undefined;
+    return Array.isArray(value) ? value : [value];
+  }, z.array(schema).optional());
+}
+
 export const accessibilitySchema = z.object({
   pmr: z.boolean().default(false),
   parking: z.boolean().default(false),
@@ -36,6 +50,8 @@ export const createSpotSchema = z.object({
   description: z.string().max(2000, 'La description ne peut pas dépasser 2000 caractères').optional(),
   latitude: z.number().min(-90, 'Latitude invalide').max(90, 'Latitude invalide'),
   longitude: z.number().min(-180, 'Longitude invalide').max(180, 'Longitude invalide'),
+  department: z.string().min(1).max(100).optional(),
+  commune: z.string().min(1).max(100).optional(),
   waterType: WaterTypeEnum,
   waterCategory: WaterCategoryEnum.optional(),
   fishingTypes: z.array(FishingTypeEnum).min(1, 'Au moins un type de pêche est requis'),
@@ -47,32 +63,35 @@ export const updateSpotSchema = createSpotSchema.partial().extend({
   status: SpotStatusEnum.optional(),
 });
 
+export const authorUpdateSpotSchema = createSpotSchema.partial();
+
 export const spotFiltersSchema = z.object({
-  waterType: z.array(WaterTypeEnum).optional(),
-  fishingTypes: z.array(FishingTypeEnum).optional(),
-  minRating: z.number().min(0).max(5).optional(),
-  pmr: z.boolean().optional(),
-  nightFishing: z.boolean().optional(),
-  isPremium: z.boolean().optional(),
-  species: z.array(z.string()).optional(),
+  waterType: optionalArrayQuery(WaterTypeEnum),
+  fishingTypes: optionalArrayQuery(FishingTypeEnum),
+  minRating: z.coerce.number().min(0).max(5).optional(),
+  pmr: optionalBooleanQuery,
+  nightFishing: optionalBooleanQuery,
+  isPremium: optionalBooleanQuery,
+  species: optionalArrayQuery(z.string()),
   department: z.string().optional(),
   search: z.string().optional(),
-  radius: z.number().min(1).max(100000).optional(),
-  lat: z.number().optional(),
-  lng: z.number().optional(),
-  page: z.number().min(1).default(1),
-  limit: z.number().min(1).max(100).default(20),
+  radius: z.coerce.number().min(1).max(100000).optional(),
+  lat: z.coerce.number().optional(),
+  lng: z.coerce.number().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
-export const nearbyQuerySchema = z.object({
-  lat: z.number().min(-90).max(90),
-  lng: z.number().min(-180).max(180),
-  radius: z.number().min(100).max(100000).default(10000),
-  limit: z.number().min(1).max(100).default(50),
-  offset: z.number().min(0).default(0),
+export const nearbyQuerySchema = spotFiltersSchema.extend({
+  lat: z.coerce.number().min(-90).max(90),
+  lng: z.coerce.number().min(-180).max(180),
+  radius: z.coerce.number().min(100).max(100000).default(10000),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 export type CreateSpotInput = z.infer<typeof createSpotSchema>;
 export type UpdateSpotInput = z.infer<typeof updateSpotSchema>;
+export type AuthorUpdateSpotInput = z.infer<typeof authorUpdateSpotSchema>;
 export type SpotFiltersInput = z.infer<typeof spotFiltersSchema>;
 export type NearbyQuery = z.infer<typeof nearbyQuerySchema>;

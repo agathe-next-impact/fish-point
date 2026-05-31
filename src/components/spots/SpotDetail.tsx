@@ -1,6 +1,6 @@
 'use client';
 
-import { Star, MapPin, Check, Share2, Heart, Navigation, Eye } from 'lucide-react';
+import { Star, MapPin, Check, Heart, Navigation, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { WATER_TYPE_LABELS, FISHING_TYPE_LABELS, ABUNDANCE_LABELS } from '@/lib/constants';

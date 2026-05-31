@@ -13,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown';
 import { ThemeToggle } from './ThemeToggle';
-import { cn } from '@/lib/utils';
 
 export function Navbar() {
   const { data: session } = useSession();
