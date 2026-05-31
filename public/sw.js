@@ -1,4 +1,4 @@
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 const STATIC_CACHE = `fishspot-static-v${CACHE_VERSION}`;
 const API_CACHE = `fishspot-api-v${CACHE_VERSION}`;
 const TILES_CACHE = `fishspot-tiles-v${CACHE_VERSION}`;

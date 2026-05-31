@@ -103,7 +103,8 @@ export function MapContainer({
     if (filters.premiumOnly) params.set('premiumOnly', 'true');
 
     const suffix = params.size > 0 ? `?${params}` : '';
-    return `/api/spots/tiles/{z}/{x}/{y}.mvt${suffix}`;
+    const origin = typeof window === 'undefined' ? '' : window.location.origin;
+    return `${origin}/api/spots/tiles/{z}/{x}/{y}.mvt${suffix}`;
   }, [filters]);
 
   const handleStyleChange = useCallback((next: MapStyleKey) => {
