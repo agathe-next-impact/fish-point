@@ -23,7 +23,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
       <div className="flex items-center gap-4 mb-6">
         <UserAvatar name={user.name} image={user.image} size="lg" />
         <div>
-          <h1 className="text-2xl font-bold">{user.name || user.username}</h1>
+          <h1 className="fs-dsp text-2xl font-extrabold text-ink">{user.name || user.username}</h1>
           {user.bio && <p className="text-muted-foreground text-sm">{user.bio}</p>}
           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
             <Calendar className="h-3 w-3" /> Membre depuis {formatDate(user.createdAt)}

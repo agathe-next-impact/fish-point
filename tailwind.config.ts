@@ -69,12 +69,13 @@ const config: Config = {
         },
       },
       borderRadius: {
+        xl: "28px",
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "14px",
+        sm: "10px",
       },
       fontFamily: {
-        sans: ["var(--font-sans)"],
+        sans: ["var(--font-hanken)", "system-ui", "-apple-system", "sans-serif"],
         mono: ["var(--font-mono)"],
       },
       keyframes: {

@@ -1,12 +1,13 @@
 'use client';
 
-import { Star, MapPin, Check, Share2, Heart, Navigation, Eye, Database, Accessibility, ParkingCircle, Ship, Moon } from 'lucide-react';
+import { Star, MapPin, Check, Heart, Navigation, Eye, Database, Accessibility, ParkingCircle, Ship, Moon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { WATER_TYPE_LABELS, FISHING_TYPE_LABELS, ABUNDANCE_LABELS, ACCESS_TYPE_LABELS } from '@/lib/constants';
+import { ScoreBadge } from '@/components/ui/score-badge';
+import { AccessTag } from '@/components/ui/access-tag';
+import { WATER_TYPE_LABELS, FISHING_TYPE_LABELS } from '@/lib/constants';
 import { getDepartmentName } from '@/config/departments';
 import { formatDate } from '@/lib/utils';
-import { SpotAccessBadge } from './SpotAccessBadge';
 import { SpotRegulations } from './SpotRegulations';
 import { SpotWeather } from './SpotWeather';
 import { SpotWaterLevel } from './SpotWaterLevel';
@@ -40,33 +41,37 @@ export function SpotDetail({ spot }: SpotDetailProps) {
       </div>
 
       {/* Title section */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <h1 className="text-2xl sm:text-3xl font-bold">{spot.name}</h1>
-            {spot.isVerified && <Check className="h-5 w-5 text-green-500" />}
-          </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <MapPin className="h-4 w-4" />
-            <span>{spot.commune ? `${spot.commune}, ` : ''}{getDepartmentName(spot.department)} ({spot.department})</span>
-          </div>
-          <div className="flex items-center gap-3 mt-2">
-            {spot.averageRating > 0 && (
-              <span className="flex items-center gap-1">
-                <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                <span className="font-semibold">{spot.averageRating.toFixed(1)}</span>
-                <span className="text-sm text-muted-foreground">({spot.reviewCount} avis)</span>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          {spot.fishabilityScore != null && <ScoreBadge score={spot.fishabilityScore} size="lg" />}
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="fs-dsp text-2xl font-extrabold text-ink sm:text-3xl">{spot.name}</h1>
+              {spot.isVerified && <Check className="h-5 w-5 text-fs-accent" />}
+            </div>
+            <div className="mt-1 flex items-center gap-2 text-fs-muted">
+              <MapPin className="h-4 w-4" strokeWidth={1.9} />
+              <span>{spot.commune ? `${spot.commune}, ` : ''}{getDepartmentName(spot.department)} ({spot.department})</span>
+            </div>
+            <div className="mt-2 flex items-center gap-3">
+              <AccessTag accessType={spot.accessType} />
+              {spot.averageRating > 0 && (
+                <span className="flex items-center gap-1">
+                  <Star className="h-4 w-4 fill-amber text-amber" />
+                  <span className="font-semibold text-ink">{spot.averageRating.toFixed(1)}</span>
+                  <span className="text-sm text-fs-muted">({spot.reviewCount} avis)</span>
+                </span>
+              )}
+              <span className="flex items-center gap-1 text-sm text-fs-muted">
+                <Eye className="h-3.5 w-3.5" /> {spot.viewCount} vues
               </span>
-            )}
-            <span className="flex items-center gap-1 text-sm text-muted-foreground">
-              <Eye className="h-3.5 w-3.5" /> {spot.viewCount} vues
-            </span>
+            </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">
-            <Heart className="h-4 w-4 mr-1" /> Favoris
+            <Heart className="h-4 w-4" /> Favoris
           </Button>
           <SpotShareButton spotName={spot.name} spotSlug={spot.slug} />
         </div>
@@ -77,13 +82,13 @@ export function SpotDetail({ spot }: SpotDetailProps) {
         <div className="md:col-span-2 space-y-6">
           {spot.description && (
             <section>
-              <h2 className="text-lg font-semibold mb-2">Description</h2>
+              <h2 className="fs-dsp text-lg font-bold text-ink mb-2">Description</h2>
               <p className="text-muted-foreground whitespace-pre-line">{spot.description}</p>
             </section>
           )}
 
           <section>
-            <h2 className="text-lg font-semibold mb-3">Informations</h2>
+            <h2 className="fs-dsp text-lg font-bold text-ink mb-3">Informations</h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Type d&apos;eau</p>
@@ -98,7 +103,7 @@ export function SpotDetail({ spot }: SpotDetailProps) {
               <div>
                 <p className="text-sm text-muted-foreground">Accès</p>
                 <div className="mt-1">
-                  <SpotAccessBadge accessType={spot.accessType} />
+                  <AccessTag accessType={spot.accessType} />
                 </div>
               </div>
             </div>
@@ -114,7 +119,7 @@ export function SpotDetail({ spot }: SpotDetailProps) {
 
           {spot.accessibility && (
             <section>
-              <h2 className="text-lg font-semibold mb-3">Accès & équipements</h2>
+              <h2 className="fs-dsp text-lg font-bold text-ink mb-3">Accès & équipements</h2>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { key: 'pmr' as const, label: 'PMR', Icon: Accessibility },
@@ -143,7 +148,7 @@ export function SpotDetail({ spot }: SpotDetailProps) {
 
           {spot.species.length > 0 && (
             <section>
-              <h2 className="text-lg font-semibold mb-3">Espèces présentes</h2>
+              <h2 className="fs-dsp text-lg font-bold text-ink mb-3">Espèces présentes</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {spot.species.map((s) => (
                   <SpotSpeciesCard key={s.id} species={s} />
@@ -172,18 +177,18 @@ export function SpotDetail({ spot }: SpotDetailProps) {
           <SpotFishIndex spotId={spot.id} />
           <SpotSolunar spotId={spot.id} />
 
-          <div className="p-4 rounded-lg border">
-            <h3 className="font-semibold text-sm mb-2">Coordonnées</h3>
-            <p className="text-sm text-muted-foreground font-mono">
+          <div className="rounded-fs-lg border border-line p-4">
+            <h3 className="mb-2 text-sm font-bold text-ink">Coordonnées</h3>
+            <p className="font-mono text-sm text-fs-muted">
               {spot.latitude.toFixed(6)}, {spot.longitude.toFixed(6)}
             </p>
             <a
               href={`https://www.google.com/maps/dir/?api=1&destination=${spot.latitude},${spot.longitude}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3 w-full mt-2"
+              className="fs-btn fs-btn-primary mt-3 w-full"
             >
-              <Navigation className="h-4 w-4 mr-1" /> Itinéraire
+              <Navigation className="h-4 w-4" /> Itinéraire
             </a>
           </div>
 

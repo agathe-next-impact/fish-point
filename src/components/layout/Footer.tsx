@@ -1,53 +1,65 @@
 import Link from 'next/link';
-import { Fish } from 'lucide-react';
+import { BrandLogo } from './BrandLogo';
+
+const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
+  {
+    title: 'Explorer',
+    links: [
+      { href: '/map', label: 'Carte' },
+      { href: '/spots', label: 'Spots' },
+      { href: '/explore', label: 'Par département' },
+      { href: '/regulations', label: 'Réglementation' },
+    ],
+  },
+  {
+    title: 'Communauté',
+    links: [
+      { href: '/community', label: 'Feed' },
+      { href: '/community/leaderboard', label: 'Classements' },
+      { href: '/spots/new', label: 'Ajouter un spot' },
+    ],
+  },
+  {
+    title: 'Légal',
+    links: [
+      { href: '#', label: 'Mentions légales' },
+      { href: '#', label: 'Politique de confidentialité' },
+      { href: '#', label: 'CGU' },
+      { href: '#', label: 'Contact' },
+    ],
+  },
+];
 
 export function Footer() {
   return (
-    <footer className="border-t bg-background">
-      <div className="container px-4 py-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+    <footer className="bg-[#06262e] text-white/70">
+      <div className="container px-4 py-12">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 md:grid-cols-4">
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Fish className="h-5 w-5 text-primary" />
-              <span className="font-bold">FishSpot</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Les meilleurs spots de pêche autorisés en France.
-              Carte interactive, réglementation et conditions en temps réel.
+            <BrandLogo textClassName="text-white" />
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/55">
+              Les meilleurs spots de pêche autorisés en France. Carte interactive, réglementation et
+              conditions en temps réel.
             </p>
           </div>
 
-          <div>
-            <h4 className="font-semibold mb-3 text-sm">Explorer</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/map" className="hover:text-foreground transition-colors">Carte</Link></li>
-              <li><Link href="/spots" className="hover:text-foreground transition-colors">Spots</Link></li>
-              <li><Link href="/explore" className="hover:text-foreground transition-colors">Par département</Link></li>
-              <li><Link href="/regulations" className="hover:text-foreground transition-colors">Réglementation</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-3 text-sm">Communauté</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/community" className="hover:text-foreground transition-colors">Feed</Link></li>
-              <li><Link href="/community/leaderboard" className="hover:text-foreground transition-colors">Classements</Link></li>
-              <li><Link href="/spots/new" className="hover:text-foreground transition-colors">Ajouter un spot</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-3 text-sm">Légal</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="#" className="hover:text-foreground transition-colors">Mentions légales</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Politique de confidentialité</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">CGU</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Contact</Link></li>
-            </ul>
-          </div>
+          {COLUMNS.map((col) => (
+            <div key={col.title}>
+              <h4 className="mb-4 text-xs font-bold uppercase tracking-[0.05em] text-white/45">{col.title}</h4>
+              <ul className="space-y-2.5 text-sm">
+                {col.links.map((link) => (
+                  <li key={link.label}>
+                    <Link href={link.href} className="text-white/65 transition-colors hover:text-white">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
-        <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
+        <div className="mt-10 border-t border-white/10 pt-6 text-center text-sm text-white/45">
           <p>&copy; {new Date().getFullYear()} FishSpot. Tous droits réservés.</p>
         </div>
       </div>

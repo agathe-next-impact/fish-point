@@ -83,7 +83,7 @@ export function MapControls({
                   type="checkbox"
                   checked={activeLayers.includes(layer.id)}
                   onChange={() => toggleLayer(layer.id)}
-                  className="mt-0.5 rounded border-gray-300"
+                  className="mt-0.5 rounded border-line accent-[var(--fs-accent)]"
                 />
                 <span>
                   <span className="block text-sm leading-4">{layer.label}</span>

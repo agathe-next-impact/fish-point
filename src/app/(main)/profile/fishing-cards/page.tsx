@@ -82,7 +82,7 @@ export default function FishingCardsPage() {
   return (
     <div className="container mx-auto px-4 py-6 max-w-2xl">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Mes cartes de peche</h1>
+        <h1 className="fs-dsp text-2xl font-extrabold text-ink">Mes cartes de peche</h1>
         <Button onClick={() => { setShowForm(true); setEditingCard(null); }}>
           <Plus className="h-4 w-4 mr-1" />
           Ajouter une carte

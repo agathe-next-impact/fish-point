@@ -81,7 +81,7 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <h1 className="mb-6 text-2xl font-bold">Tableau de bord</h1>
+      <h1 className="fs-dsp mb-6 text-[2rem] font-extrabold text-ink">Statistiques</h1>
 
       {/* Stat Cards */}
       {isLoading ? (

@@ -42,7 +42,7 @@ export default function NewPrivateSpotPage() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <h1 className="text-2xl font-bold mb-6">Nouveau spot prive</h1>
+      <h1 className="fs-dsp text-2xl font-extrabold text-ink mb-6">Nouveau spot prive</h1>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Form */}

@@ -1,23 +1,14 @@
 import { memo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Star, MapPin, Navigation } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { WATER_TYPE_LABELS } from '@/lib/constants';
+import { MapPin, Navigation, Star } from 'lucide-react';
+import { ScoreBadge } from '@/components/ui/score-badge';
+import { AccessTag } from '@/components/ui/access-tag';
+import { WATER_TYPE_LABELS, WATER_CATEGORY_LABELS, FISHING_TYPE_LABELS } from '@/lib/constants';
 import { getDepartmentName } from '@/config/departments';
 import { formatDistance } from '@/lib/map';
 import { getOrthoPhotoUrl } from '@/services/ign-ortho.service';
-import { SpotAccessBadge } from './SpotAccessBadge';
 import type { SpotListItem } from '@/types/spot';
-
-function getFishabilityColor(score: number): string {
-  if (score >= 80) return '#22c55e';
-  if (score >= 60) return '#84cc16';
-  if (score >= 40) return '#eab308';
-  if (score >= 20) return '#f97316';
-  return '#ef4444';
-}
 
 interface SpotCardProps {
   spot: SpotListItem;
@@ -25,66 +16,73 @@ interface SpotCardProps {
 
 export const SpotCard = memo(function SpotCard({ spot }: SpotCardProps) {
   const imageUrl = spot.primaryImage || getOrthoPhotoUrl(spot.latitude, spot.longitude, 600, 400);
+  const secondaryChip =
+    (spot.waterCategory && WATER_CATEGORY_LABELS[spot.waterCategory]) ||
+    (spot.fishingTypes?.[0] && FISHING_TYPE_LABELS[spot.fishingTypes[0]]) ||
+    null;
 
   return (
-    <Link href={`/spots/${spot.slug}`}>
-      <Card className="overflow-hidden hover:shadow-md transition-shadow group">
-        <div className="relative h-48 bg-muted">
+    <Link href={`/spots/${spot.slug}`} className="group block">
+      <article className="overflow-hidden rounded-fs-lg border border-line bg-card shadow-fs-sm transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-fs-md">
+        <div className="relative h-[140px] bg-muted">
           <Image
             src={imageUrl}
             alt={spot.name}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
-          <div className="absolute top-2 right-2 flex gap-1">
-            {spot.fishabilityScore != null && (
-              <div
-                className="flex items-center justify-center h-7 w-7 rounded-full text-white text-[10px] font-bold shadow"
-                style={{ backgroundColor: getFishabilityColor(spot.fishabilityScore) }}
-              >
-                {spot.fishabilityScore}
-              </div>
-            )}
-            {spot.isVerified && (
-              <Badge variant="success" className="text-[10px]">Vérifié</Badge>
-            )}
-            {spot.isPremium && (
-              <Badge className="text-[10px] bg-yellow-500">Premium</Badge>
-            )}
+          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/55 to-transparent" />
+          {spot.fishabilityScore != null && (
+            <div className="absolute right-2.5 top-2.5">
+              <ScoreBadge score={spot.fishabilityScore} size="sm" className="shadow-fs-sm" />
+            </div>
+          )}
+          {spot.isPremium && (
+            <span className="absolute left-2.5 top-2.5 rounded-full bg-amber px-2 py-0.5 text-[10px] font-bold text-white shadow-fs-sm">
+              Premium
+            </span>
+          )}
+          <div className="absolute bottom-2.5 left-2.5">
+            <AccessTag accessType={spot.accessType} variant="dark" />
           </div>
         </div>
-        <CardContent className="p-4">
-          <h3 className="font-semibold text-base mb-1 truncate">{spot.name}</h3>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-            <MapPin className="h-3 w-3" />
+
+        <div className="p-4">
+          <h3 className="fs-dsp truncate text-[17px] font-bold text-ink">{spot.name}</h3>
+          <div className="mt-1 flex items-center gap-1.5 text-sm text-fs-muted">
+            <MapPin className="h-3.5 w-3.5 shrink-0" strokeWidth={1.9} />
             <span className="truncate">
-              {spot.commune ? `${spot.commune}, ` : ''}{getDepartmentName(spot.department)}
+              {spot.commune ? `${spot.commune}, ` : ''}
+              {getDepartmentName(spot.department)}
             </span>
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-xs">
+
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="truncate rounded-full bg-aqua-soft px-2.5 py-1 text-xs font-semibold text-teal-deep">
                 {WATER_TYPE_LABELS[spot.waterType] || spot.waterType}
-              </Badge>
-              <SpotAccessBadge accessType={spot.accessType} size="sm" />
-              {spot.averageRating > 0 && (
-                <span className="flex items-center gap-0.5 text-sm">
-                  <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
-                  {spot.averageRating.toFixed(1)}
-                  <span className="text-muted-foreground text-xs">({spot.reviewCount})</span>
+              </span>
+              {secondaryChip && (
+                <span className="truncate rounded-full px-2.5 py-1 text-xs font-semibold text-fs-muted shadow-[inset_0_0_0_1.5px_var(--fs-line)]">
+                  {secondaryChip}
                 </span>
               )}
             </div>
-            {spot.distance !== undefined && (
-              <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
-                <Navigation className="h-3 w-3" />
+            {spot.distance !== undefined ? (
+              <span className="flex shrink-0 items-center gap-0.5 text-xs text-fs-muted">
+                <Navigation className="h-3 w-3" strokeWidth={1.9} />
                 {formatDistance(spot.distance)}
               </span>
-            )}
+            ) : spot.averageRating > 0 ? (
+              <span className="flex shrink-0 items-center gap-0.5 text-xs font-semibold text-ink">
+                <Star className="h-3.5 w-3.5 fill-amber text-amber" />
+                {spot.averageRating.toFixed(1)}
+              </span>
+            ) : null}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </article>
     </Link>
   );
 });

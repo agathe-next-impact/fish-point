@@ -303,8 +303,8 @@ export function CatchForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-lg mx-auto">
-      <h2 className="text-xl font-semibold">Enregistrer une prise</h2>
+    <form onSubmit={handleSubmit(onSubmit)} className="mx-auto max-w-lg space-y-4">
+      <h2 className="fs-dsp text-2xl font-extrabold text-ink">Nouvelle prise</h2>
 
       {/* Core fields */}
       <input type="hidden" {...register('spotId')} />

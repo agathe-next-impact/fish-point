@@ -13,7 +13,7 @@ export default function GroupsPage() {
   return (
     <div className="container mx-auto px-4 py-6 max-w-2xl">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Mes groupes</h1>
+        <h1 className="fs-dsp text-2xl font-extrabold text-ink">Mes groupes</h1>
         <div className="flex gap-2">
           <Link href="/community/groups/join">
             <Button variant="outline">

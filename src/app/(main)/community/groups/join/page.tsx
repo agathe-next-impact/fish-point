@@ -56,7 +56,7 @@ export default function JoinGroupPage() {
         <ArrowLeft className="h-4 w-4" /> Retour aux groupes
       </Link>
 
-      <h1 className="text-2xl font-bold mb-6">Rejoindre un groupe</h1>
+      <h1 className="fs-dsp text-2xl font-extrabold text-ink mb-6">Rejoindre un groupe</h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>

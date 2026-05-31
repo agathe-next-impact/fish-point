@@ -18,7 +18,7 @@ export default function MySpotsPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <Lock className="h-5 w-5 text-muted-foreground" />
-          <h1 className="text-2xl font-bold">Mes spots prives</h1>
+          <h1 className="fs-dsp text-2xl font-extrabold text-ink">Mes spots prives</h1>
         </div>
         <Link href="/my-spots/new">
           <Button>

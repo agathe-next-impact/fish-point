@@ -23,7 +23,7 @@ export default async function CatchDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-lg">
-      <h1 className="text-2xl font-bold mb-6">Détail de la prise</h1>
+      <h1 className="fs-dsp text-2xl font-extrabold text-ink mb-6">Détail de la prise</h1>
       <CatchCard catchData={catchData} />
     </div>
   );

@@ -101,7 +101,7 @@ export default function PrivateSpotDetailPage({ params }: { params: Promise<{ id
             >
               <IconComponent className="h-4 w-4 text-white" />
             </div>
-            <h1 className="text-2xl font-bold">{spot.name}</h1>
+            <h1 className="fs-dsp text-2xl font-extrabold text-ink">{spot.name}</h1>
             <Lock className="h-4 w-4 text-muted-foreground" />
           </div>
         </div>

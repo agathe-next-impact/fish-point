@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { Layer, Popup, Source, type LayerProps } from 'react-map-gl/maplibre';
 import { useQuery } from '@tanstack/react-query';
 import { Navigation, Star } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ScoreBadge } from '@/components/ui/score-badge';
 import { WATER_TYPE_LABELS } from '@/lib/constants';
 import { formatDistance } from '@/lib/map';
 import type { SpotListItem } from '@/types/spot';
@@ -38,29 +38,16 @@ const unclusteredLayer: LayerProps = {
   source: SPOTS_SOURCE_ID,
   'source-layer': 'spots',
   paint: {
+    // FishSpot two-tier score rule: >=80 green, <80 amber; teal/faint fallback
     'circle-color': [
       'case',
       ['has', 'fishabilityScore'],
-      [
-        'interpolate',
-        ['linear'],
-        ['to-number', ['get', 'fishabilityScore']],
-        0,
-        '#ef4444',
-        20,
-        '#f97316',
-        40,
-        '#eab308',
-        60,
-        '#84cc16',
-        80,
-        '#22c55e',
-      ],
-      ['case', ['get', 'isVerified'], '#0ea5e9', '#64748b'],
+      ['step', ['to-number', ['get', 'fishabilityScore']], '#d98a1c', 80, '#1f9d6b'],
+      ['case', ['get', 'isVerified'], '#0e8c7f', '#8aa0a4'],
     ],
-    'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 4, 10, 7, 15, 10],
+    'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 5, 10, 8, 15, 11],
     'circle-stroke-color': '#ffffff',
-    'circle-stroke-width': 1.5,
+    'circle-stroke-width': 2.5,
   },
 };
 
@@ -81,14 +68,6 @@ const scoreLayer: LayerProps = {
     'text-color': '#ffffff',
   },
 };
-
-function getFishabilityColor(score: number): string {
-  if (score >= 80) return '#22c55e';
-  if (score >= 60) return '#84cc16';
-  if (score >= 40) return '#eab308';
-  if (score >= 20) return '#f97316';
-  return '#ef4444';
-}
 
 async function fetchSpotPreview(id: string): Promise<SpotListItem> {
   const response = await fetch(`/api/spots/map-preview/${encodeURIComponent(id)}`);
@@ -131,36 +110,33 @@ export const SpotLayer = memo(function SpotLayer({ tileUrl, selectedSpot, onClos
           onClose={onClosePopup}
           className="spot-popup"
         >
-          <div className="p-2 min-w-[200px]">
-            <h3 className="font-semibold text-sm mb-1">{popupSpot.name}</h3>
-            <div className="flex items-center gap-2 mb-2">
-              <Badge variant="secondary" className="text-xs">
-                {WATER_TYPE_LABELS[popupSpot.waterType] || popupSpot.waterType}
-              </Badge>
-              {popupSpot.averageRating > 0 && (
-                <span className="flex items-center gap-0.5 text-xs">
-                  <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                  {popupSpot.averageRating.toFixed(1)}
-                </span>
-              )}
+          <div className="min-w-[210px] p-3">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="fs-dsp text-[15px] font-bold leading-tight text-ink">{popupSpot.name}</h3>
               {popupSpot.fishabilityScore != null && (
-                <span
-                  className="text-xs font-semibold px-1.5 py-0.5 rounded-full text-white"
-                  style={{ backgroundColor: getFishabilityColor(popupSpot.fishabilityScore) }}
-                >
-                  {popupSpot.fishabilityScore}
+                <ScoreBadge score={popupSpot.fishabilityScore} size="sm" />
+              )}
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="rounded-full bg-aqua-soft px-2.5 py-0.5 text-xs font-semibold text-teal-deep">
+                {WATER_TYPE_LABELS[popupSpot.waterType] || popupSpot.waterType}
+              </span>
+              {popupSpot.averageRating > 0 && (
+                <span className="flex items-center gap-0.5 text-xs font-semibold text-ink">
+                  <Star className="h-3 w-3 fill-amber text-amber" />
+                  {popupSpot.averageRating.toFixed(1)}
                 </span>
               )}
             </div>
             {preview?.distance !== undefined && (
-              <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+              <p className="mt-2 flex items-center gap-1 text-xs text-fs-muted">
                 <Navigation className="h-3 w-3" />
                 {formatDistance(preview.distance)}
               </p>
             )}
             <Link href={`/spots/${popupSpot.slug}`}>
-              <Button size="sm" className="w-full text-xs">
-                Voir detail
+              <Button size="sm" className="mt-3 w-full text-xs">
+                Voir la fiche
               </Button>
             </Link>
           </div>

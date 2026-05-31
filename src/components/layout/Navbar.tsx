@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { MapPin, Search, Bell, Menu, User, LogOut, Settings, Fish, BarChart3, MapPinned, AlertTriangle, Users, CreditCard } from 'lucide-react';
+import { Search, Bell, Menu, User, LogOut, Settings, BarChart3, MapPinned, AlertTriangle, Users, CreditCard } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,57 +14,48 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown';
 import { ThemeToggle } from './ThemeToggle';
+import { BrandLogo } from './BrandLogo';
 import { cn } from '@/lib/utils';
+
+const NAV_LINKS = [
+  { href: '/map', label: 'Carte' },
+  { href: '/spots', label: 'Spots' },
+  { href: '/explore', label: 'Par département' },
+  { href: '/regulations', label: 'Réglementation' },
+];
 
 export function Navbar() {
   const { data: session } = useSession();
+  const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2">
-            <Fish className="h-6 w-6 text-primary" />
-            <span className="text-lg font-bold hidden sm:inline-block">FishSpot</span>
-          </Link>
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
-          <nav className="hidden md:flex items-center gap-4">
-            <Link
-              href="/map"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <MapPin className="h-4 w-4 inline mr-1" />
-              Carte
-            </Link>
-            <Link
-              href="/spots"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Spots
-            </Link>
-            <Link
-              href="/explore"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Explorer
-            </Link>
-            <Link
-              href="/community"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Communauté
-            </Link>
-            <Link
-              href="/regulations"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Réglementation
-            </Link>
+  return (
+    <header className="sticky top-0 z-40 w-full border-b border-line bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+      <div className="container flex h-16 items-center justify-between px-4">
+        <div className="flex items-center gap-7">
+          <BrandLogo />
+
+          <nav className="hidden md:flex items-center gap-1">
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  'rounded-[9px] px-3 py-1.5 text-sm font-semibold transition-colors',
+                  isActive(link.href)
+                    ? 'bg-secondary text-secondary-foreground'
+                    : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground',
+                )}
+              >
+                {link.label}
+              </Link>
+            ))}
           </nav>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Link href="/spots?focus=search">
             <Button variant="ghost" size="icon" aria-label="Rechercher">
               <Search className="h-4 w-4" />
@@ -116,9 +108,9 @@ export function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/community/groups">
+                    <Link href="/community">
                       <Users className="h-4 w-4 mr-2" />
-                      Mes groupes
+                      Communauté
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
@@ -166,23 +158,23 @@ export function Navbar() {
       </div>
 
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t bg-background">
-          <nav className="flex flex-col p-4 gap-2">
-            <Link href="/map" className="flex items-center gap-2 p-2 rounded-md hover:bg-accent" onClick={() => setIsMobileMenuOpen(false)}>
-              <MapPin className="h-4 w-4" /> Carte
-            </Link>
-            <Link href="/spots" className="flex items-center gap-2 p-2 rounded-md hover:bg-accent" onClick={() => setIsMobileMenuOpen(false)}>
-              Spots
-            </Link>
-            <Link href="/explore" className="flex items-center gap-2 p-2 rounded-md hover:bg-accent" onClick={() => setIsMobileMenuOpen(false)}>
-              Explorer
-            </Link>
-            <Link href="/community" className="flex items-center gap-2 p-2 rounded-md hover:bg-accent" onClick={() => setIsMobileMenuOpen(false)}>
-              Communauté
-            </Link>
-            <Link href="/regulations" className="flex items-center gap-2 p-2 rounded-md hover:bg-accent" onClick={() => setIsMobileMenuOpen(false)}>
-              Réglementation
-            </Link>
+        <div className="md:hidden border-t border-line bg-card">
+          <nav className="flex flex-col p-4 gap-1">
+            {[...NAV_LINKS, { href: '/community', label: 'Communauté' }].map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  'rounded-md px-3 py-2.5 text-sm font-semibold transition-colors',
+                  isActive(link.href)
+                    ? 'bg-secondary text-secondary-foreground'
+                    : 'text-foreground hover:bg-secondary/50',
+                )}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                {link.label}
+              </Link>
+            ))}
           </nav>
         </div>
       )}

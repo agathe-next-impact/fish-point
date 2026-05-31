@@ -43,7 +43,7 @@ export default async function DepartmentPage({ params }: DepartmentPageProps) {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <h1 className="text-2xl font-bold mb-2">Spots de pêche - {dept.name} ({dept.code})</h1>
+      <h1 className="fs-dsp text-2xl font-extrabold text-ink mb-2">Spots de pêche - {dept.name} ({dept.code})</h1>
       <p className="text-muted-foreground mb-6">{dept.region}</p>
 
       {spotCards.length > 0 ? (
