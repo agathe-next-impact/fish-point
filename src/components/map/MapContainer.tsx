@@ -61,7 +61,6 @@ export function MapContainer({ spots = [], onSpotClick, className }: MapContaine
         <GeolocateControl
           position="top-right"
           trackUserLocation
-          showUserHeading
           positionOptions={{ enableHighAccuracy: true }}
         />
 

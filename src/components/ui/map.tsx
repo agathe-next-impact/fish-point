@@ -239,7 +239,9 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
       styleTimeoutRef.current = setTimeout(() => {
         setIsStyleLoaded(true);
         if (projection) {
-          map.setProjection(projection);
+          (map as MapLibreGL.Map & {
+            setProjection?: (projection: MapLibreGL.ProjectionSpecification) => void;
+          }).setProjection?.(projection);
         }
       }, 100);
     };
