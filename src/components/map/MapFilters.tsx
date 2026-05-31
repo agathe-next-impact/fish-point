@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -15,6 +14,16 @@ export function MapFilters() {
   const resetFilters = useMapStore((s) => s.resetFilters);
   const isFiltersOpen = useMapStore((s) => s.isFiltersOpen);
   const setFiltersOpen = useMapStore((s) => s.setFiltersOpen);
+
+  const activeFilterCount =
+    filters.waterTypes.length +
+    filters.fishingTypes.length +
+    (filters.minRating > 0 ? 1 : 0) +
+    (filters.minFishabilityScore > 0 ? 1 : 0) +
+    (!filters.showAutoDiscovered ? 1 : 0) +
+    (filters.pmr ? 1 : 0) +
+    (filters.nightFishing ? 1 : 0) +
+    (filters.premiumOnly ? 1 : 0);
 
   const toggleWaterType = (type: string) => {
     const current = filters.waterTypes;
@@ -39,23 +48,32 @@ export function MapFilters() {
       <Button
         variant="outline"
         size="sm"
-        className="absolute bottom-24 left-4 z-10 bg-background shadow-md lg:bottom-4"
+        className="absolute bottom-24 left-3 z-10 gap-2 bg-background/95 shadow-md backdrop-blur lg:bottom-4 sm:left-4"
         onClick={() => setFiltersOpen(!isFiltersOpen)}
+        aria-expanded={isFiltersOpen}
       >
-        <Filter className="h-4 w-4 mr-1" />
+        <Filter className="h-4 w-4" />
         Filtres
+        {activeFilterCount > 0 && (
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs text-primary-foreground">
+            {activeFilterCount}
+          </span>
+        )}
       </Button>
 
       <div
         className={cn(
-          'absolute top-0 left-0 z-20 h-full w-80 bg-background border-r shadow-xl transition-transform duration-300 overflow-y-auto',
+          'absolute left-0 top-0 z-20 h-full w-[min(22rem,calc(100vw-2rem))] overflow-y-auto border-r bg-background/98 shadow-xl transition-transform duration-300',
           isFiltersOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
         <div className="p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-lg">Filtres</h3>
-            <Button variant="ghost" size="icon" onClick={() => setFiltersOpen(false)}>
+            <div>
+              <h3 className="font-semibold text-lg">Filtres</h3>
+              <p className="text-xs text-muted-foreground">{activeFilterCount} actif{activeFilterCount > 1 ? 's' : ''}</p>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setFiltersOpen(false)} aria-label="Fermer les filtres">
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -133,6 +151,15 @@ export function MapFilters() {
             </div>
 
             <div className="space-y-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filters.premiumOnly}
+                  onChange={(e) => setFilters({ premiumOnly: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+                <span className="text-sm">Spots premium</span>
+              </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"

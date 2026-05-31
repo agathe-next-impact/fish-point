@@ -1,0 +1,141 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
+
+interface TileParams {
+  z: string;
+  x: string;
+  y: string;
+}
+
+interface MvtRow {
+  mvt: Uint8Array | Buffer | null;
+}
+
+function parseTileParam(value: string): number | null {
+  if (!/^\d+$/.test(value)) return null;
+  return Number(value);
+}
+
+function parseNumberParam(value: string | null): number | null {
+  if (!value) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<TileParams> },
+) {
+  try {
+    const { z: zParam, x: xParam, y: yParam } = await params;
+    const z = parseTileParam(zParam);
+    const x = parseTileParam(xParam);
+    const yWithExtension = yParam.replace(/\.mvt$/, '');
+    const y = parseTileParam(yWithExtension);
+
+    if (z == null || x == null || y == null || z < 0 || z > 16) {
+      return NextResponse.json({ error: 'Invalid tile coordinates' }, { status: 400 });
+    }
+
+    const max = 2 ** z;
+    if (x < 0 || x >= max || y < 0 || y >= max) {
+      return NextResponse.json({ error: 'Tile out of range' }, { status: 400 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const waterTypes = searchParams.getAll('waterType').filter(Boolean);
+    const fishingTypes = searchParams.getAll('fishingType').filter(Boolean);
+    const minRating = parseNumberParam(searchParams.get('minRating'));
+    const minFishabilityScore = parseNumberParam(searchParams.get('minFishabilityScore'));
+    const origin = searchParams.get('origin');
+    const pmr = searchParams.get('pmr') === 'true';
+    const nightFishing = searchParams.get('nightFishing') === 'true';
+    const premiumOnly = searchParams.get('premiumOnly') === 'true';
+
+    const filters: Prisma.Sql[] = [];
+    if (waterTypes.length > 0) {
+      filters.push(Prisma.sql`s."waterType"::text IN (${Prisma.join(waterTypes)})`);
+    }
+    if (fishingTypes.length > 0) {
+      filters.push(Prisma.sql`s."fishingTypes"::text[] && ARRAY[${Prisma.join(fishingTypes)}]::text[]`);
+    }
+    if (minRating != null && minRating > 0) {
+      filters.push(Prisma.sql`s."averageRating" >= ${minRating}`);
+    }
+    if (minFishabilityScore != null && minFishabilityScore > 0) {
+      filters.push(Prisma.sql`s."fishabilityScore" >= ${minFishabilityScore}`);
+    }
+    if (origin === 'USER') {
+      filters.push(Prisma.sql`s."dataOrigin" = ${'USER'}::"DataOrigin"`);
+    }
+    if (pmr) {
+      filters.push(Prisma.sql`s."accessibility"->>'pmr' = 'true'`);
+    }
+    if (nightFishing) {
+      filters.push(Prisma.sql`s."accessibility"->>'nightFishing' = 'true'`);
+    }
+    if (premiumOnly) {
+      filters.push(Prisma.sql`s."isPremium" = true`);
+    }
+
+    const filterSql = filters.length > 0
+      ? Prisma.sql`AND ${Prisma.join(filters, ' AND ')}`
+      : Prisma.empty;
+
+    const rows = await prisma.$queryRaw<MvtRow[]>(Prisma.sql`
+      WITH bounds AS (
+        SELECT ST_TileEnvelope(${z}, ${x}, ${y}) AS geom
+      ),
+      mvtgeom AS (
+        SELECT
+          ST_AsMVTGeom(
+            ST_Transform(ST_SetSRID(ST_MakePoint(s."longitude", s."latitude"), 4326), 3857),
+            bounds.geom,
+            4096,
+            64,
+            true
+          ) AS geom,
+          s."id",
+          s."slug",
+          s."name",
+          s."department",
+          s."commune",
+          s."waterType"::text AS "waterType",
+          s."waterCategory"::text AS "waterCategory",
+          array_to_string(s."fishingTypes"::text[], ',') AS "fishingTypes",
+          s."averageRating",
+          s."reviewCount",
+          s."isPremium",
+          s."isVerified",
+          s."fishabilityScore",
+          s."dataOrigin"::text AS "dataOrigin",
+          s."accessType"::text AS "accessType"
+        FROM "spots" s, bounds
+        WHERE s."status" = ${'APPROVED'}::"SpotStatus"
+          AND ST_Intersects(s."geometry", ST_Transform(bounds.geom, 4326)::geography)
+          ${filterSql}
+        ORDER BY s."averageRating" DESC NULLS LAST
+        LIMIT CASE
+          WHEN ${z} < 7 THEN 500
+          WHEN ${z} < 9 THEN 1500
+          ELSE 5000
+        END
+      )
+      SELECT ST_AsMVT(mvtgeom.*, 'spots', 4096, 'geom') AS mvt
+      FROM mvtgeom
+    `);
+
+    const tile = rows[0]?.mvt ? Buffer.from(rows[0].mvt) : Buffer.alloc(0);
+
+    return new NextResponse(tile, {
+      headers: {
+        'Content-Type': 'application/vnd.mapbox-vector-tile',
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+      },
+    });
+  } catch (error) {
+    console.error('GET /api/spots/tiles/[z]/[x]/[y] error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

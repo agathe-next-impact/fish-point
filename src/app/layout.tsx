@@ -5,6 +5,7 @@ import { AuthProvider } from '@/components/providers/AuthProvider';
 import { QueryProvider } from '@/components/providers/QueryProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { GeolocationProvider } from '@/components/providers/GeolocationProvider';
+import { ServiceWorkerProvider } from '@/components/providers/ServiceWorkerProvider';
 import { ToastContainer } from '@/components/ui/toast';
 import './globals.css';
 
@@ -29,10 +30,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <QueryProvider>
             <ThemeProvider>
-              <GeolocationProvider>
-                {children}
-                <ToastContainer />
-              </GeolocationProvider>
+              <ServiceWorkerProvider>
+                <GeolocationProvider>
+                  {children}
+                  <ToastContainer />
+                </GeolocationProvider>
+              </ServiceWorkerProvider>
             </ThemeProvider>
           </QueryProvider>
         </AuthProvider>

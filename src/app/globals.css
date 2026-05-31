@@ -62,13 +62,15 @@
   }
 }
 
-/* Mapbox overrides */
+/* MapLibre popup overrides */
+.maplibregl-popup-content,
 .mapboxgl-popup-content {
   padding: 0 !important;
   border-radius: 0.5rem !important;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
 }
 
+.maplibregl-popup-close-button,
 .mapboxgl-popup-close-button {
   font-size: 1.25rem;
   padding: 0.25rem 0.5rem;

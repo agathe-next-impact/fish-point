@@ -35,7 +35,7 @@ async function fetchBboxSpots(bounds: MapBounds): Promise<SpotListItem[]> {
   return json.data;
 }
 
-export function useMapSpots() {
+export function useMapSpots({ enabled = true }: { enabled?: boolean } = {}) {
   const [bounds, setBounds] = useState<MapBounds | null>(null);
   const [debouncedBounds, setDebouncedBounds] = useState<MapBounds | null>(null);
 
@@ -48,7 +48,7 @@ export function useMapSpots() {
   const query = useQuery({
     queryKey: ['mapSpots', debouncedBounds],
     queryFn: () => fetchBboxSpots(debouncedBounds!),
-    enabled: debouncedBounds !== null,
+    enabled: enabled && debouncedBounds !== null,
     placeholderData: keepPreviousData,
     staleTime: 2 * 60 * 1000,
   });
@@ -56,6 +56,8 @@ export function useMapSpots() {
   return {
     spots: query.data ?? [],
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    error: query.error,
     setBounds,
   };
 }

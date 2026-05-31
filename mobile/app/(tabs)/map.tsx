@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { Camera, Map, Marker } from '@maplibre/maplibre-react-native';
 import { Locate, SlidersHorizontal, MapPin } from 'lucide-react-native';
 import { colors, spacing, typography, borderRadius, SCREEN_PADDING_H } from '@/theme';
 import { useMapStore } from '@/stores/map.store';
@@ -31,17 +32,19 @@ export default function MapScreen() {
     <View style={styles.container}>
       <StatusBar style="dark" />
 
-      {/* Map placeholder - Mapbox will be integrated here */}
-      <View style={styles.mapPlaceholder}>
-        <MapPin size={48} color={colors.primary[300]} />
-        <Text style={styles.mapPlaceholderText}>Carte</Text>
-        <Text style={styles.mapPlaceholderHint}>
-          Integration Mapbox a venir
-        </Text>
-        <Text style={styles.mapCoords}>
-          {viewport.latitude.toFixed(4)}, {viewport.longitude.toFixed(4)} (zoom {viewport.zoom})
-        </Text>
-      </View>
+      <Map mapStyle="https://demotiles.maplibre.org/style.json" style={styles.map}>
+        <Camera
+          center={[viewport.longitude, viewport.latitude]}
+          zoom={viewport.zoom}
+        />
+        {location && (
+          <Marker id="current-location" lngLat={[location.longitude, location.latitude]} anchor="bottom">
+            <View style={styles.locationMarker}>
+              <MapPin size={22} color={colors.white} />
+            </View>
+          </Marker>
+        )}
+      </Map>
 
       {/* Floating controls */}
       <SafeAreaView style={styles.controls} edges={['top']}>
@@ -150,6 +153,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primary[50],
+  },
+  map: {
+    flex: 1,
+  },
+  locationMarker: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary[600],
+    borderWidth: 3,
+    borderColor: colors.white,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
   },
   mapPlaceholderText: {
     ...typography.h1,

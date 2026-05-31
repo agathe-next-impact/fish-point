@@ -13,6 +13,7 @@ export const spotListSelect = {
   reviewCount: true,
   isPremium: true,
   isVerified: true,
+  accessibility: true,
   fishabilityScore: true,
   dataOrigin: true,
   accessType: true,
@@ -32,4 +33,3 @@ export function toSpotListItem<T extends {
     primaryImage: images[0]?.url || null,
   };
 }
-

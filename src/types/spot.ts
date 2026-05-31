@@ -25,6 +25,7 @@ export interface SpotListItem {
   isPremium: boolean;
   isVerified: boolean;
   primaryImage: string | null;
+  accessibility?: SpotAccessibility | null;
   distance?: number;
   fishabilityScore: number | null;
   dataOrigin: string;

@@ -145,7 +145,7 @@ vercel env add NEXT_PUBLIC_PMTILES_URL production
 vercel env add NEXT_PUBLIC_PMTILES_URL development
 ```
 
-Côté mobile, ajouter `EXPO_PUBLIC_PMTILES_URL` avec la même valeur dans `mobile/.env` (ou `mobile/app.json` selon ton setup).
+Le dossier mobile est suspendu en mode PWA-only. Conserver uniquement `NEXT_PUBLIC_PMTILES_URL` côté web/PWA.
 
 ## 7. Vérifications (acceptance criteria ML-01)
 

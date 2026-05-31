@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getCached } from '@/lib/redis';
-import { spotListSelect, toSpotListItem } from '@/lib/spot-list-select';
+import type { SpotListItem } from '@/types/spot';
 
 function roundCoord(value: number): number {
   return Math.round(value * 100) / 100;
 }
+
+type RawMapSpot = SpotListItem;
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,18 +32,44 @@ export async function GET(request: NextRequest) {
     const cacheKey = `spots:bbox:${rounded.north}:${rounded.south}:${rounded.east}:${rounded.west}:${limit}`;
 
     const data = await getCached(cacheKey, async () => {
-      const spots = await prisma.spot.findMany({
-        where: {
-          status: 'APPROVED',
-          latitude: { gte: rounded.south, lte: rounded.north },
-          longitude: { gte: rounded.west, lte: rounded.east },
-        },
-        select: spotListSelect,
-        orderBy: { averageRating: 'desc' },
-        take: limit,
-      });
+      const spots = await prisma.$queryRaw<RawMapSpot[]>(Prisma.sql`
+        SELECT
+          s."id",
+          s."slug",
+          s."name",
+          s."latitude",
+          s."longitude",
+          s."department",
+          s."commune",
+          s."waterType",
+          s."waterCategory",
+          s."fishingTypes",
+          s."averageRating",
+          s."reviewCount",
+          s."isPremium",
+          s."isVerified",
+          s."accessibility",
+          s."fishabilityScore",
+          s."dataOrigin",
+          s."accessType",
+          img."url" AS "primaryImage"
+        FROM "spots" s
+        LEFT JOIN LATERAL (
+          SELECT "url"
+          FROM "spot_images"
+          WHERE "spotId" = s."id" AND "isPrimary" = true
+          LIMIT 1
+        ) img ON true
+        WHERE s."status" = ${'APPROVED'}::"SpotStatus"
+          AND ST_Intersects(
+            s."geometry",
+            ST_MakeEnvelope(${rounded.west}, ${rounded.south}, ${rounded.east}, ${rounded.north}, 4326)::geography
+          )
+        ORDER BY s."averageRating" DESC
+        LIMIT ${limit}
+      `);
 
-      return spots.map(toSpotListItem);
+      return spots;
     }, 120);
 
     return NextResponse.json({ data }, {

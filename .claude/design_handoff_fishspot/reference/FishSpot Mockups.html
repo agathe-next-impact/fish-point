@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FishSpot — Mockups animés PWA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesque:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="app.css" />
+<style>
+  html, body { margin:0; height:100%; }
+  body {
+    font-family: "Hanken Grotesque", system-ui, sans-serif;
+    background: var(--stage, #e7ecea);
+    overflow:hidden;
+  }
+  #root { height:100vh; }
+  .stage {
+    position:fixed; inset:0; overflow:hidden;
+    background:
+      radial-gradient(110% 80% at 80% -10%, rgba(95,201,184,0.16), transparent 60%),
+      var(--stage, #e7ecea);
+    transition: background .3s ease;
+    display:flex; flex-direction:column;
+  }
+  .stage.graphite { --stage:#1a2528; color:#fff; }
+  .stage.graphite .topbar-sub { color:rgba(255,255,255,0.6); }
+  .topbar { display:flex; align-items:center; gap:16px; padding:18px 30px 6px; flex-shrink:0; z-index:5; }
+  .topbar-title { font-family:"Bricolage Grotesque",sans-serif; font-weight:800; font-size:22px; letter-spacing:-0.02em; }
+  .topbar-sub { font-size:13.5px; color:#5d757b; margin-top:1px; }
+  .brand-dot { width:36px; height:36px; border-radius:11px; background:var(--accent); display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:0 4px 12px rgba(14,140,127,0.4); }
+  .ctrl { display:flex; align-items:center; gap:10px; }
+  .pill-btn { display:inline-flex; align-items:center; gap:8px; border:none; cursor:pointer; font-family:inherit; font-weight:700; font-size:13.5px; padding:10px 16px; border-radius:999px; background:var(--accent); color:#fff; box-shadow:0 4px 14px rgba(14,140,127,0.3); transition:transform .15s ease, background .2s; }
+  .pill-btn:active { transform:scale(.96); }
+  .pill-btn.ghost { background:rgba(18,42,47,0.06); color:var(--ink); box-shadow:none; }
+  .stage.graphite .pill-btn.ghost { background:rgba(255,255,255,0.12); color:#fff; }
+  .steps { display:flex; align-items:center; gap:7px; }
+  .step-dot { height:7px; border-radius:99px; border:none; cursor:pointer; padding:0; background:rgba(18,42,47,0.16); transition:all .3s ease; width:7px; }
+  .stage.graphite .step-dot { background:rgba(255,255,255,0.22); }
+  .step-dot.on { width:26px; background:var(--accent); }
+  .step-label { font-size:13px; font-weight:600; color:#5d757b; min-width:160px; }
+  .stage.graphite .step-label { color:rgba(255,255,255,0.7); }
+
+  .scene { flex:1; position:relative; overflow:hidden; }
+  .scaler { position:absolute; top:50%; left:50%; transform-origin:center center; }
+  .row { display:flex; align-items:flex-end; gap:56px; }
+  .frame-wrap { display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .frame-label { display:flex; align-items:center; gap:9px; font-family:"Bricolage Grotesque",sans-serif; font-weight:700; font-size:15px; color:#3a5258; }
+  .stage.graphite .frame-label { color:rgba(255,255,255,0.85); }
+  .frame-label .tag { font-family:"Hanken Grotesque",sans-serif; font-weight:600; font-size:11.5px; padding:3px 9px; border-radius:99px; background:rgba(14,140,127,0.14); color:var(--accent-deep); }
+  .stage.graphite .frame-label .tag { background:rgba(95,201,184,0.2); color:var(--aqua); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="frames/ios-frame.jsx"></script>
+<script type="text/babel" src="frames/browser-window.jsx"></script>
+<script type="text/babel" src="fishspot-data.jsx"></script>
+<script type="text/babel" src="fishspot-shared.jsx"></script>
+<script type="text/babel" src="fishspot-mobile.jsx"></script>
+<script type="text/babel" src="fishspot-desktop.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const TOUR = [
+  { label:'Accueil — la promesse',   d:'home',  mTab:'map',     mSpot:null },
+  { label:'Carte interactive',        d:'map',   mTab:'map',     mSpot:null },
+  { label:'Fiche spot détaillée',     d:'spots', mTab:'map',     mSpot:'sc' },
+  { label:'Liste des spots filtrée',  d:'spots', mTab:'catches', mSpot:null },
+  { label:'Ajouter une prise',        d:'map',   mTab:'add',     mSpot:null },
+  { label:'Statistiques & profil',    d:'map',   mTab:'stats',   mSpot:null },
+];
+
+const ACCENTS = [
+  ['#0e8c7f','#0a6b61'],  // Lac (teal)
+  ['#1d6fa5','#155a86'],  // Océan (blue)
+  ['#2f8f5b','#226e44'],  // Forêt (green)
+  ['#d98a1c','#b06f12'],  // Coucher (amber)
+];
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": [
+    "#1d6fa5",
+    "#155a86"
+  ],
+  "autoplay": true,
+  "speed": 3.4,
+  "stage": "clair"
+}/*EDITMODE-END*/;
+
+const BROWSER_W = 1160, BROWSER_H = 752, PHONE_W = 402, PHONE_H = 874, GAP = 56;
+const CONTENT_W = BROWSER_W + GAP + PHONE_W;
+const CONTENT_H = PHONE_H;
+
+function useFit(headerH){
+  const [scale, setScale] = useState(0.7);
+  useEffect(()=>{
+    function fit(){
+      const availW = Math.max(window.innerWidth - 64, 0);
+      const availH = Math.max(window.innerHeight - headerH - 70, 0);
+      const s = Math.min(availW/CONTENT_W, availH/CONTENT_H, 1);
+      setScale(Math.max(0.25, s || 0.25));
+    }
+    requestAnimationFrame(fit);
+    window.addEventListener('resize', fit);
+    return ()=>window.removeEventListener('resize', fit);
+  }, [headerH]);
+  return scale;
+}
+
+function App(){
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [step, setStep] = useState(0);
+  const [playing, setPlaying] = useState(t.autoplay);
+  const scale = useFit(78);
+
+  const [accent, accentDeep] = t.accent;
+  const graphite = t.stage === 'graphite';
+
+  // apply accent to CSS vars
+  useEffect(()=>{
+    document.documentElement.style.setProperty('--accent', accent);
+    document.documentElement.style.setProperty('--accent-deep', accentDeep);
+  }, [accent, accentDeep]);
+
+  useEffect(()=>{ setPlaying(t.autoplay); }, [t.autoplay]);
+
+  // tour driver
+  useEffect(()=>{
+    if(!playing) return;
+    const id = setTimeout(()=> setStep(s => (s+1) % TOUR.length), t.speed*1000);
+    return ()=> clearTimeout(id);
+  }, [playing, step, t.speed]);
+
+  const cur = TOUR[step];
+
+  return (
+    <div className={'stage'+(graphite?' graphite':'')}>
+      <div className="topbar">
+        <div className="brand-dot"><FSIcon name="fish" size={22} fill /></div>
+        <div style={{ marginRight:'auto' }}>
+          <div className="topbar-title">FishSpot</div>
+          <div className="topbar-sub">Mockups animés · PWA desktop &amp; mobile</div>
+        </div>
+        <div className="ctrl">
+          <div className="step-label">{String(step+1).padStart(2,'0')} — {cur.label}</div>
+          <div className="steps">
+            {TOUR.map((s,i)=>(
+              <button key={i} className={'step-dot'+(i===step?' on':'')} onClick={()=>{ setStep(i); setPlaying(false); }} title={s.label} />
+            ))}
+          </div>
+          <button className="pill-btn ghost" onClick={()=>setStep(s=>(s+1)%TOUR.length)} title="Étape suivante">
+            <FSIcon name="chevron" size={16} sw={2.4} />
+          </button>
+          <button className="pill-btn" onClick={()=>setPlaying(p=>!p)}>
+            {playing
+              ? <React.Fragment><span style={{display:'inline-flex',gap:3}}><span style={{width:3,height:12,background:'#fff',borderRadius:1}}/><span style={{width:3,height:12,background:'#fff',borderRadius:1}}/></span> Pause</React.Fragment>
+              : <React.Fragment><span style={{borderLeft:'9px solid #fff',borderTop:'6px solid transparent',borderBottom:'6px solid transparent'}}/> Lecture</React.Fragment>}
+          </button>
+        </div>
+      </div>
+
+      <div className="scene">
+        <div className="scaler" style={{ transform:`translate(-50%,-50%) scale(${scale})` }}>
+          <div className="row">
+            <div className="frame-wrap">
+              <div className="frame-label"><FSIcon name="map" size={18} sw={2}/> Desktop <span className="tag">app.fishspot.fr</span></div>
+              <ChromeWindow width={BROWSER_W} height={BROWSER_H}
+                tabs={[{title:'FishSpot — Spots de pêche en France'},{title:'Carte IGN'}]} activeIndex={0}
+                url="fish-point.fr">
+                <DesktopApp extPage={cur.d} />
+              </ChromeWindow>
+            </div>
+            <div className="frame-wrap">
+              <div className="frame-label"><FSIcon name="fish" size={18} fill/> Mobile PWA <span className="tag">installable</span></div>
+              <MobileApp extTab={cur.mTab} extSpot={cur.mSpot} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Apparence" />
+        <TweakColor label="Couleur d'accent" value={t.accent} options={ACCENTS}
+          onChange={(v)=>setTweak('accent', v)} />
+        <TweakRadio label="Fond du décor" value={t.stage} options={['clair','graphite']}
+          onChange={(v)=>setTweak('stage', v)} />
+        <TweakSection label="Démo automatique" />
+        <TweakToggle label="Lecture auto" value={t.autoplay}
+          onChange={(v)=>setTweak('autoplay', v)} />
+        <TweakSlider label="Vitesse" value={t.speed} min={1.5} max={6} step={0.1} unit="s"
+          onChange={(v)=>setTweak('speed', v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+<template id="__bundler_thumbnail">
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100" height="100" rx="20" fill="#08303a"/>
+  <g transform="translate(50,52)" fill="none" stroke="#5fc9b8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M-18 0c5-7 12-10 19-10 7 0 12 3 14 10-2 7-7 10-14 10-7 0-14-3-19-10z"/>
+    <path d="M1 -10l7-5v10M1 10l7 5v-10"/>
+  </g>
+</svg>
+</template>
+</body>
+</html>

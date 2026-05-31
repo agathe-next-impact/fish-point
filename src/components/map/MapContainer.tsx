@@ -1,11 +1,22 @@
 'use client';
 
 import { useCallback, useMemo, useRef, useState } from 'react';
-import Map, { NavigationControl, GeolocateControl, type MapRef, type ViewStateChangeEvent } from 'react-map-gl/maplibre';
+import Map, {
+  NavigationControl,
+  GeolocateControl,
+  type MapLayerMouseEvent,
+  type MapRef,
+  type ViewStateChangeEvent,
+} from 'react-map-gl/maplibre';
 import { useMapStore } from '@/store/map.store';
 import { DEFAULT_CENTER, MAP_STYLE_KEYS, buildSatelliteStyle, getDefaultVectorStyle, type MapStyleKey } from '@/lib/map';
 import '@/lib/map-runtime'; // side-effect: registers `pmtiles://` protocol on client
-import { SpotCluster } from './SpotCluster';
+import {
+  UNCLUSTERED_LAYER_ID,
+  UNCLUSTERED_SCORE_LAYER_ID,
+  SpotLayer,
+  type SelectedTileSpot,
+} from './SpotLayer';
 import { MapControls } from './MapControls';
 import { MapFilters } from './MapFilters';
 import { UserLocation } from './UserLocation';
@@ -27,50 +38,129 @@ interface MapBounds {
 interface MapContainerProps {
   spots?: SpotListItem[];
   privateSpots?: PrivateSpotSummary[];
-  onSpotClick?: (spot: SpotListItem) => void;
   onBoundsChange?: (bounds: MapBounds) => void;
+  isLoading?: boolean;
   className?: string;
 }
 
-export function MapContainer({ spots = [], privateSpots = [], onSpotClick, onBoundsChange, className }: MapContainerProps) {
+export function MapContainer({
+  spots = [],
+  privateSpots = [],
+  onBoundsChange,
+  isLoading = false,
+  className,
+}: MapContainerProps) {
   const mapRef = useRef<MapRef>(null);
   const viewport = useMapStore((s) => s.viewport);
   const setViewport = useMapStore((s) => s.setViewport);
   const activeLayers = useMapStore((s) => s.activeLayers);
+  const filters = useMapStore((s) => s.filters);
   const [styleKey, setStyleKey] = useState<MapStyleKey>(MAP_STYLE_KEYS.vector);
+  const [selectedSpot, setSelectedSpot] = useState<SelectedTileSpot | null>(null);
 
   const mapStyle = useMemo(
     () => (styleKey === MAP_STYLE_KEYS.satellite ? buildSatelliteStyle() : getDefaultVectorStyle()),
     [styleKey],
   );
 
-  const handleMove = useCallback(
-    (evt: ViewStateChangeEvent) => {
-      setViewport({
-        latitude: evt.viewState.latitude,
-        longitude: evt.viewState.longitude,
-        zoom: evt.viewState.zoom,
-      });
-    },
-    [setViewport],
+  const filteredSpots = useMemo(
+    () =>
+      spots.filter((spot) => {
+        if (filters.waterTypes.length > 0 && !filters.waterTypes.includes(spot.waterType)) return false;
+        if (
+          filters.fishingTypes.length > 0 &&
+          !spot.fishingTypes.some((type) => filters.fishingTypes.includes(type))
+        ) {
+          return false;
+        }
+        if (filters.minRating > 0 && spot.averageRating < filters.minRating) return false;
+        if (
+          filters.minFishabilityScore > 0 &&
+          (spot.fishabilityScore == null || spot.fishabilityScore < filters.minFishabilityScore)
+        ) {
+          return false;
+        }
+        if (!filters.showAutoDiscovered && spot.dataOrigin !== 'USER') return false;
+        if (filters.pmr && !spot.accessibility?.pmr) return false;
+        if (filters.nightFishing && !spot.accessibility?.nightFishing) return false;
+        if (filters.premiumOnly && !spot.isPremium) return false;
+        return true;
+      }),
+    [filters, spots],
   );
+
+  const spotTileUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    filters.waterTypes.forEach((type) => params.append('waterType', type));
+    filters.fishingTypes.forEach((type) => params.append('fishingType', type));
+    if (filters.minRating > 0) params.set('minRating', filters.minRating.toString());
+    if (filters.minFishabilityScore > 0) {
+      params.set('minFishabilityScore', filters.minFishabilityScore.toString());
+    }
+    if (!filters.showAutoDiscovered) params.set('origin', 'USER');
+    if (filters.pmr) params.set('pmr', 'true');
+    if (filters.nightFishing) params.set('nightFishing', 'true');
+    if (filters.premiumOnly) params.set('premiumOnly', 'true');
+
+    const suffix = params.size > 0 ? `?${params}` : '';
+    return `/api/spots/tiles/{z}/{x}/{y}.mvt${suffix}`;
+  }, [filters]);
 
   const handleStyleChange = useCallback((next: MapStyleKey) => {
     setStyleKey(next);
   }, []);
 
-  const emitBounds = useCallback(() => {
+  const syncMapState = useCallback((evt?: ViewStateChangeEvent) => {
     const map = mapRef.current;
-    if (!map || !onBoundsChange) return;
+    if (!map) return;
+    if (evt) {
+      setViewport({
+        latitude: evt.viewState.latitude,
+        longitude: evt.viewState.longitude,
+        zoom: evt.viewState.zoom,
+        bearing: evt.viewState.bearing,
+        pitch: evt.viewState.pitch,
+      });
+    }
     const b = map.getBounds();
     if (!b) return;
-    onBoundsChange({
+    const nextBounds = {
       north: b.getNorth(),
       south: b.getSouth(),
       east: b.getEast(),
       west: b.getWest(),
-    });
-  }, [onBoundsChange]);
+    };
+    onBoundsChange?.(nextBounds);
+  }, [onBoundsChange, setViewport]);
+
+  const interactiveLayerIds = activeLayers.includes('spots')
+    ? [UNCLUSTERED_LAYER_ID, UNCLUSTERED_SCORE_LAYER_ID]
+    : [];
+
+  const handleMapClick = useCallback((event: MapLayerMouseEvent) => {
+    const feature = event.features?.[0];
+    if (!feature) {
+      setSelectedSpot(null);
+      return;
+    }
+
+    const [longitude, latitude] = event.lngLat.toArray();
+    if (feature.layer.id === UNCLUSTERED_LAYER_ID || feature.layer.id === UNCLUSTERED_SCORE_LAYER_ID) {
+      const properties = feature.properties;
+      if (typeof properties?.id === 'string') {
+        setSelectedSpot({
+          id: properties.id,
+          slug: typeof properties.slug === 'string' ? properties.slug : properties.id,
+          name: typeof properties.name === 'string' ? properties.name : 'Spot',
+          latitude,
+          longitude,
+          waterType: properties.waterType as SelectedTileSpot['waterType'],
+          averageRating: Number(properties.averageRating ?? 0),
+          fishabilityScore: properties.fishabilityScore == null ? null : Number(properties.fishabilityScore),
+        });
+      }
+    }
+  }, []);
 
   return (
     <div className={className || 'relative w-full h-full'}>
@@ -81,9 +171,10 @@ export function MapContainer({ spots = [], privateSpots = [], onSpotClick, onBou
           longitude: viewport.longitude || DEFAULT_CENTER.longitude,
           zoom: viewport.zoom || DEFAULT_CENTER.zoom,
         }}
-        onMove={handleMove}
-        onMoveEnd={emitBounds}
-        onLoad={emitBounds}
+        onMoveEnd={syncMapState}
+        onLoad={() => syncMapState()}
+        onClick={handleMapClick}
+        interactiveLayerIds={interactiveLayerIds}
         mapStyle={mapStyle}
         style={{ width: '100%', height: '100%' }}
         maxBounds={[[-10, 40], [12, 52]]}
@@ -99,12 +190,16 @@ export function MapContainer({ spots = [], privateSpots = [], onSpotClick, onBou
         />
 
         {activeLayers.includes('spots') && (
-          <SpotCluster spots={spots} onSpotClick={onSpotClick} />
+          <SpotLayer
+            tileUrl={spotTileUrl}
+            selectedSpot={selectedSpot}
+            onClosePopup={() => setSelectedSpot(null)}
+          />
         )}
 
-        {activeLayers.includes('heatmap') && <HeatmapLayer spots={spots} />}
+        {activeLayers.includes('heatmap') && <HeatmapLayer spots={filteredSpots} />}
 
-        {activeLayers.includes('fishability') && <FishabilityLayer spots={spots} />}
+        {activeLayers.includes('fishability') && <FishabilityLayer spots={filteredSpots} />}
 
         {activeLayers.includes('regulations') && <RegulationZones />}
 
@@ -118,6 +213,8 @@ export function MapContainer({ spots = [], privateSpots = [], onSpotClick, onBou
       <MapControls
         styleKey={styleKey}
         onStyleChange={handleStyleChange}
+        visibleSpotCount={filteredSpots.length}
+        isLoading={isLoading}
       />
       <MapFilters />
     </div>

@@ -97,7 +97,7 @@ async function main(): Promise<void> {
   console.log(`  1. Set in .env.local:`);
   console.log(`       NEXT_PUBLIC_PMTILES_URL="${baseUrl}"`);
   console.log(`  2. Set the same value in Vercel project env vars (Preview + Production)`);
-  console.log(`  3. For mobile, set EXPO_PUBLIC_PMTILES_URL to the same URL`);
+  console.log(`  3. For the PWA, keep NEXT_PUBLIC_PMTILES_URL pointing to the uploaded file`);
 }
 
 main().catch((err) => {

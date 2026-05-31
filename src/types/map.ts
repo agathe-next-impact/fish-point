@@ -19,7 +19,7 @@ export interface GeoJSONFeature {
     type: 'Point';
     coordinates: [number, number];
   };
-  properties: Record<string, unknown>;
+  properties: Record<string, string | number | boolean | null>;
 }
 
 export interface GeoJSONFeatureCollection {

@@ -14,13 +14,14 @@ const MapContainer = dynamic(
 );
 
 export default function MapPage() {
-  const { spots, setBounds } = useMapSpots();
   const { data: session } = useSession();
   const activeLayers = useMapStore((s) => s.activeLayers);
   const [privateBounds, setPrivateBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
 
   const isAuthenticated = !!session?.user?.id;
   const showPrivateSpots = isAuthenticated && activeLayers.includes('privateSpots');
+  const needsBboxSpots = activeLayers.includes('heatmap') || activeLayers.includes('fishability');
+  const { spots, setBounds, isFetching } = useMapSpots({ enabled: needsBboxSpots });
 
   const { data: privateSpotsData } = usePrivateSpotsBbox(showPrivateSpots ? privateBounds : null);
 
@@ -35,6 +36,7 @@ export default function MapPage() {
         spots={spots}
         privateSpots={privateSpotsData?.data ?? []}
         onBoundsChange={handleBoundsChange}
+        isLoading={needsBboxSpots ? isFetching : false}
       />
     </div>
   );
