@@ -17,13 +17,20 @@ export const DEFAULT_CENTER = {
   zoom: 6,
 } as const;
 
+export const WESTERN_EUROPE_BOUNDS: [[number, number], [number, number]] = [
+  [-10.62, 35.49],
+  [18.52, 58.67],
+];
+
 export const FRANCE_BOUNDS: [[number, number], [number, number]] = [
   [-5.56, 41.31],
   [9.66, 51.12],
 ];
 
+export const MAP_MAX_BOUNDS = WESTERN_EUROPE_BOUNDS;
+
 export const PMTILES_URL = process.env.NEXT_PUBLIC_PMTILES_URL ?? '';
-export const PMTILES_FILE = 'france.pmtiles';
+export const PMTILES_FILE = process.env.NEXT_PUBLIC_PMTILES_FILE ?? 'western-europe.pmtiles';
 
 const PROTOMAPS_SOURCE_ID = 'protomaps';
 const IGN_ORTHO_WMTS =
@@ -129,7 +136,12 @@ export function calculateBounds(
   padding = 0.01,
 ): { north: number; south: number; east: number; west: number } {
   if (points.length === 0) {
-    return { north: 51.12, south: 41.31, east: 9.66, west: -5.56 };
+    return {
+      north: MAP_MAX_BOUNDS[1][1],
+      south: MAP_MAX_BOUNDS[0][1],
+      east: MAP_MAX_BOUNDS[1][0],
+      west: MAP_MAX_BOUNDS[0][0],
+    };
   }
 
   const lats = points.map((p) => p.latitude);

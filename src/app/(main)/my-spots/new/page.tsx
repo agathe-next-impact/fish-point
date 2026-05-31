@@ -7,7 +7,7 @@ import { MapPin } from 'lucide-react';
 import { PrivateSpotForm } from '@/components/private-spots/PrivateSpotForm';
 import { useCreatePrivateSpot } from '@/hooks/usePrivateSpots';
 import { useNotificationStore } from '@/store/notification.store';
-import { DEFAULT_CENTER, getDefaultVectorStyle } from '@/lib/map';
+import { DEFAULT_CENTER, MAP_MAX_BOUNDS, getDefaultVectorStyle } from '@/lib/map';
 import '@/lib/map-runtime';
 import type { CreatePrivateSpotInput } from '@/validators/private-spot.schema';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -75,7 +75,7 @@ export default function NewPrivateSpotPage() {
                 mapStyle={mapStyle}
                 style={{ width: '100%', height: '100%' }}
                 onClick={handleMapClick}
-                maxBounds={[[-10, 40], [12, 52]]}
+                maxBounds={MAP_MAX_BOUNDS}
                 minZoom={4}
                 maxZoom={18}
               >

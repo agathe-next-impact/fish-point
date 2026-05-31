@@ -3,7 +3,7 @@
 > Procédure ML-01 de la migration Mapbox → MapLibre.
 > Voir `docs/migration-maplibre.md` pour le contexte complet.
 
-Objectif : héberger un fichier `france.pmtiles` (~300–500 Mo) sur Vercel Blob, accessible publiquement, avec support natif des Range requests et un cache long. Aucun service externe à Vercel.
+Objectif : héberger un fichier `western-europe.pmtiles` sur Vercel Blob, accessible publiquement, avec support natif des Range requests et un cache long. Aucun service externe à Vercel.
 
 ---
 
@@ -69,8 +69,8 @@ mkdir -p tiles
 PLANET_DATE=$(date -u -d '2 days ago' +%Y%m%d)
 docker run --rm -v "$PWD/tiles:/data" protomaps/go-pmtiles:latest \
   extract "https://build.protomaps.com/${PLANET_DATE}.pmtiles" \
-  /data/france.pmtiles \
-  --bbox=-5.5,41.3,9.7,51.2
+  /data/western-europe.pmtiles \
+  --bbox=-10.62,35.49,18.52,58.67
 ```
 
 **PowerShell :**
@@ -79,8 +79,8 @@ mkdir tiles -ErrorAction SilentlyContinue
 $planetDate = (Get-Date).ToUniversalTime().AddDays(-2).ToString("yyyyMMdd")
 docker run --rm -v "${PWD}/tiles:/data" protomaps/go-pmtiles:latest `
   extract "https://build.protomaps.com/$planetDate.pmtiles" `
-  /data/france.pmtiles `
-  --bbox=-5.5,41.3,9.7,51.2
+  /data/western-europe.pmtiles `
+  --bbox=-10.62,35.49,18.52,58.67
 ```
 
 Durée typique : 3–8 min selon la bande passante. La progression s'affiche en live.
@@ -95,8 +95,8 @@ Durée typique : 3–8 min selon la bande passante. La progression s'affiche en 
 mkdir tiles -ErrorAction SilentlyContinue
 $planetDate = (Get-Date).ToUniversalTime().AddDays(-2).ToString("yyyyMMdd")
 pmtiles extract "https://build.protomaps.com/$planetDate.pmtiles" `
-  tiles\france.pmtiles `
-  --bbox=-5.5,41.3,9.7,51.2
+  tiles\western-europe.pmtiles `
+  --bbox=-10.62,35.49,18.52,58.67
 ```
 
 ### Option C — Déclencher le workflow GitHub Action (zéro install local)
@@ -110,7 +110,7 @@ gh run watch
 
 Le workflow tourne ensuite tous les 1ers du mois pour garder les tuiles à jour.
 
-> Le bbox `-5.5,41.3,9.7,51.2` couvre France métro + Corse. Pour ajuster (ex. inclure Andorre, Monaco), modifier la valeur dans la commande et dans `.github/workflows/update-tiles.yml`.
+> Le bbox `-10.62,35.49,18.52,58.67` couvre l'Europe de l'Ouest sans marge ajoutée : Portugal, Espagne, France, Irlande/Royaume-Uni, Benelux, Allemagne, Suisse, Autriche et Italie. Pour l'ajuster, modifier la valeur dans la commande et dans `.github/workflows/update-tiles.yml`.
 
 ## 5. Upload vers Vercel Blob (~1–3 min selon connexion)
 
@@ -121,19 +121,19 @@ npm run upload-tiles
 ```
 
 Le script (`scripts/upload-pmtiles.ts`) :
-- charge `./tiles/france.pmtiles`
+- charge `./tiles/western-europe.pmtiles`
 - pousse vers Vercel Blob avec `access: 'public'`
 - pose `cacheControlMaxAge: 31536000` (1 an, immutable)
 - affiche l'URL publique générée
 
 Exemple de sortie :
 ```
-URL: https://abcd1234.public.blob.vercel-storage.com/france.pmtiles
+URL: https://abcd1234.public.blob.vercel-storage.com/western-europe.pmtiles
 ```
 
 ## 6. Configuration de l'URL publique (~1 min)
 
-Récupérer la base URL (sans `/france.pmtiles`) et la définir comme variable d'env Vercel **et** locale :
+Récupérer la base URL (sans `/western-europe.pmtiles`) et la définir comme variable d'env Vercel **et** locale :
 
 ```bash
 # Local
@@ -151,14 +151,14 @@ Le dossier mobile est suspendu en mode PWA-only. Conserver uniquement `NEXT_PUBL
 
 ```bash
 # 1. Range requests OK (Vercel Blob les supporte nativement)
-curl -I --range 0-1000 "$NEXT_PUBLIC_PMTILES_URL/france.pmtiles"
+curl -I --range 0-1000 "$NEXT_PUBLIC_PMTILES_URL/western-europe.pmtiles"
 # Attendu : HTTP/2 206, accept-ranges: bytes, cache-control: public, max-age=31536000, immutable
 
 # 2. Taille fichier cohérente
-curl -sI "$NEXT_PUBLIC_PMTILES_URL/france.pmtiles" | grep -i content-length
+curl -sI "$NEXT_PUBLIC_PMTILES_URL/western-europe.pmtiles" | grep -i content-length
 
 # 3. CORS (pas besoin de config — Vercel Blob répond avec Access-Control-Allow-Origin: * par défaut)
-curl -I -H "Origin: http://localhost:3000" "$NEXT_PUBLIC_PMTILES_URL/france.pmtiles"
+curl -I -H "Origin: http://localhost:3000" "$NEXT_PUBLIC_PMTILES_URL/western-europe.pmtiles"
 # Attendu : access-control-allow-origin: *
 ```
 

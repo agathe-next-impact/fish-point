@@ -1,6 +1,6 @@
-name: Update PMTiles (France)
+name: Update PMTiles (Western Europe)
 
-# Reconstruit l'extrait France des tuiles Protomaps depuis le planet PMTiles
+# Reconstruit l'extrait Europe de l'Ouest des tuiles Protomaps depuis le planet PMTiles
 # quotidien, puis pousse vers Vercel Blob.
 #
 # Déclencheurs :
@@ -52,15 +52,15 @@ jobs:
             echo "date=$(date -u -d 'yesterday' +%Y%m%d)" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Extract France from planet PMTiles
+      - name: Extract Western Europe from planet PMTiles
         run: |
           mkdir -p tiles
-          # France métropolitaine + Corse : bbox approximatif
+          # Western Europe without extra padding.
           pmtiles extract \
             "https://build.protomaps.com/${{ steps.planet.outputs.date }}.pmtiles" \
-            tiles/france.pmtiles \
-            --bbox=-5.5,41.3,9.7,51.2
-          ls -lh tiles/france.pmtiles
+            tiles/western-europe.pmtiles \
+            --bbox=-10.62,35.49,18.52,58.67
+          ls -lh tiles/western-europe.pmtiles
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -74,4 +74,4 @@ jobs:
       - name: Upload to Vercel Blob
         env:
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
-        run: npm run upload-tiles -- ./tiles/france.pmtiles --key=france.pmtiles
+        run: npm run upload-tiles -- ./tiles/western-europe.pmtiles --key=western-europe.pmtiles

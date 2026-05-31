@@ -23,6 +23,7 @@ const envSchema = z.object({
   R2_SECRET_ACCESS_KEY: z.string().optional(),
   BLOB_READ_WRITE_TOKEN: z.string().optional(),
   NEXT_PUBLIC_PMTILES_URL: optionalUrl,
+  NEXT_PUBLIC_PMTILES_FILE: z.string().min(1).optional(),
   OPENWEATHERMAP_API_KEY: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),

@@ -9,7 +9,14 @@ import Map, {
   type ViewStateChangeEvent,
 } from 'react-map-gl/maplibre';
 import { useMapStore } from '@/store/map.store';
-import { DEFAULT_CENTER, MAP_STYLE_KEYS, buildSatelliteStyle, getDefaultVectorStyle, type MapStyleKey } from '@/lib/map';
+import {
+  DEFAULT_CENTER,
+  MAP_MAX_BOUNDS,
+  MAP_STYLE_KEYS,
+  buildSatelliteStyle,
+  getDefaultVectorStyle,
+  type MapStyleKey,
+} from '@/lib/map';
 import '@/lib/map-runtime'; // side-effect: registers `pmtiles://` protocol on client
 import {
   UNCLUSTERED_LAYER_ID,
@@ -178,7 +185,7 @@ export function MapContainer({
         interactiveLayerIds={interactiveLayerIds}
         mapStyle={mapStyle}
         style={{ width: '100%', height: '100%' }}
-        maxBounds={[[-10, 40], [12, 52]]}
+        maxBounds={MAP_MAX_BOUNDS}
         minZoom={4}
         maxZoom={18}
         attributionControl={false}
