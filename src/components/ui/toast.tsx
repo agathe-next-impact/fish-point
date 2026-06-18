@@ -42,9 +42,23 @@ export function ToastContainer() {
               {toast.description && (
                 <p className="mt-1 text-xs opacity-80">{toast.description}</p>
               )}
+              {toast.action && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    toast.action?.onClick();
+                    removeToast(toast.id);
+                  }}
+                  className="mt-2 rounded-md px-2 py-1 text-xs font-semibold underline underline-offset-2 transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-1"
+                >
+                  {toast.action.label}
+                </button>
+              )}
             </div>
             <button
+              type="button"
               onClick={() => removeToast(toast.id)}
+              aria-label="Fermer la notification"
               className="shrink-0 opacity-70 hover:opacity-100"
             >
               <X className="h-4 w-4" />

@@ -1,9 +1,10 @@
 'use client';
 
-import { MapPin, Check, Heart, Navigation, Eye, Database, Accessibility, ParkingCircle, Ship, Moon } from 'lucide-react';
+import { MapPin, Check, Navigation, Eye, Database, Accessibility, ParkingCircle, Ship, Moon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { AccessTag } from '@/components/ui/access-tag';
+import { SaveSpotButton } from './SaveSpotButton';
+import { buildDirectionsUrl } from '@/lib/directions';
 import { SpotScorePanel } from './SpotScorePanel';
 import { WATER_TYPE_LABELS, FISHING_TYPE_LABELS } from '@/lib/constants';
 import { getDepartmentName } from '@/config/departments';
@@ -67,9 +68,15 @@ export function SpotDetail({ spot, reliability }: SpotDetailProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Heart className="h-4 w-4" /> Enregistrer
-          </Button>
+          <SaveSpotButton
+            spot={{
+              id: spot.id,
+              slug: spot.slug,
+              name: spot.name,
+              latitude: spot.latitude,
+              longitude: spot.longitude,
+            }}
+          />
           <SpotShareButton spotName={spot.name} spotSlug={spot.slug} />
         </div>
       </div>
@@ -196,12 +203,13 @@ export function SpotDetail({ spot, reliability }: SpotDetailProps) {
               {spot.latitude.toFixed(6)}, {spot.longitude.toFixed(6)}
             </p>
             <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${spot.latitude},${spot.longitude}`}
+              href={buildDirectionsUrl(spot.latitude, spot.longitude)}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label={`Itinéraire vers ${spot.name}`}
               className="fs-btn fs-btn-primary mt-3 w-full"
             >
-              <Navigation className="h-4 w-4" /> Itinéraire
+              <Navigation className="h-4 w-4" aria-hidden /> Itinéraire
             </a>
           </div>
 

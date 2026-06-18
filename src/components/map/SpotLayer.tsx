@@ -7,8 +7,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Navigation, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScoreBadge } from '@/components/ui/score-badge';
+import { SaveSpotButton } from '@/components/spots/SaveSpotButton';
 import { WATER_TYPE_LABELS } from '@/lib/constants';
 import { formatDistance } from '@/lib/map';
+import { buildDirectionsUrl } from '@/lib/directions';
 import type { SpotListItem } from '@/types/spot';
 
 export const SPOTS_SOURCE_ID = 'public-spots';
@@ -134,8 +136,30 @@ export const SpotLayer = memo(function SpotLayer({ tileUrl, selectedSpot, onClos
                 {formatDistance(preview.distance)}
               </p>
             )}
+            {/* Enregistrer + Itinéraire directement depuis le marqueur, sans ouvrir la fiche */}
+            <div className="mt-3 flex items-center gap-1.5">
+              <SaveSpotButton
+                variant="compact"
+                spot={{
+                  id: popupSpot.id,
+                  slug: popupSpot.slug,
+                  name: popupSpot.name,
+                  latitude: popupSpot.latitude,
+                  longitude: popupSpot.longitude,
+                }}
+              />
+              <a
+                href={buildDirectionsUrl(popupSpot.latitude, popupSpot.longitude)}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Itinéraire vers ${popupSpot.name}`}
+                className="inline-flex h-9 flex-1 items-center justify-center gap-1 rounded-md border border-input bg-background px-2 text-xs font-semibold transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <Navigation className="h-3.5 w-3.5" aria-hidden /> Itinéraire
+              </a>
+            </div>
             <Link href={`/spots/${popupSpot.slug}`}>
-              <Button size="sm" className="mt-3 w-full text-xs">
+              <Button size="sm" className="mt-2 w-full text-xs">
                 Voir la fiche
               </Button>
             </Link>

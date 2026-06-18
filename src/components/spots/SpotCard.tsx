@@ -4,9 +4,11 @@ import Image from 'next/image';
 import { MapPin, Navigation, Star } from 'lucide-react';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { AccessTag } from '@/components/ui/access-tag';
+import { SaveSpotButton } from '@/components/spots/SaveSpotButton';
 import { WATER_TYPE_LABELS, WATER_CATEGORY_LABELS, FISHING_TYPE_LABELS } from '@/lib/constants';
 import { getDepartmentName } from '@/config/departments';
 import { formatDistance } from '@/lib/map';
+import { buildDirectionsUrl } from '@/lib/directions';
 import { getOrthoPhotoUrl } from '@/services/ign-ortho.service';
 import type { SpotListItem } from '@/types/spot';
 
@@ -22,8 +24,18 @@ export const SpotCard = memo(function SpotCard({ spot }: SpotCardProps) {
     null;
 
   return (
-    <Link href={`/spots/${spot.slug}`} className="group block">
-      <article className="overflow-hidden rounded-fs-lg border border-line bg-card shadow-fs-sm transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-fs-md">
+    <article className="group relative overflow-hidden rounded-fs-lg border border-line bg-card shadow-fs-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-fs-md focus-within:-translate-y-1 focus-within:shadow-fs-md">
+      {/*
+        Lien « voir la fiche » en overlay (stretched-link) : il couvre toute la zone contenu
+        (média + texte) au clic et au clavier SANS envelopper la barre d'actions.
+        → aucune ancre imbriquée (l'<a> Itinéraire reste hors de ce <a>), et un clic sur
+        Enregistrer/Itinéraire ne navigue pas (les actions sont en relative z-10 au-dessus).
+      */}
+      <Link
+        href={`/spots/${spot.slug}`}
+        aria-label={`Voir la fiche : ${spot.name}`}
+        className="block rounded-fs-lg after:absolute after:inset-0 after:z-0 after:content-[''] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
         <div className="relative h-[140px] bg-muted">
           <Image
             src={imageUrl}
@@ -82,7 +94,35 @@ export const SpotCard = memo(function SpotCard({ spot }: SpotCardProps) {
             ) : null}
           </div>
         </div>
-      </article>
-    </Link>
+      </Link>
+
+      {/*
+        Barre d'actions — HORS du <Link> ci-dessus (frère/sœur dans l'<article>).
+        relative z-10 → au-dessus de l'overlay stretched-link : un clic ici n'ouvre pas la
+        fiche. « Enregistrer » et « Itinéraire » sont donc accessibles depuis la liste sans
+        ouvrir la fiche, et l'<a> Itinéraire n'est jamais imbriqué dans l'<a> de la fiche.
+      */}
+      <div className="relative z-10 flex items-center gap-2 px-4 pb-4">
+        <SaveSpotButton
+          variant="compact"
+          spot={{
+            id: spot.id,
+            slug: spot.slug,
+            name: spot.name,
+            latitude: spot.latitude,
+            longitude: spot.longitude,
+          }}
+        />
+        <a
+          href={buildDirectionsUrl(spot.latitude, spot.longitude)}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Itinéraire vers ${spot.name}`}
+          className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-semibold transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <Navigation className="h-4 w-4" strokeWidth={1.9} aria-hidden /> Itinéraire
+        </a>
+      </div>
+    </article>
   );
 });

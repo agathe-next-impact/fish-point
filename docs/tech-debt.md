@@ -55,6 +55,13 @@
 
 ## Medium
 
+### Espace « Enregistrés » invité — pas de fusion local → compte au login
+- **Fichiers** : `src/lib/offline-db.ts` (store `savedSpots`), futur hook de sync
+- **Constat** : les saves invité atterrissent dans IndexedDB (`savedSpots`). Au login, ils ne sont pas remontés vers le serveur (modèle `Favorite`). La sync compte est explicitement hors périmètre de la sous-tranche 6.
+- **Impact** : un visiteur qui enregistre 3 spots puis se connecte ne les retrouve pas dans ses favoris serveur (ils restent locaux).
+- **Fix proposé** : au passage `unauthenticated → authenticated`, lire `getSavedSpots()`, POST chacun vers `/api/spots/favorites`, puis `removeSavedSpot`. À faire dans le futur espace « Enregistrés » (sous-tranche suivante avec les collections).
+- **Détecté** : 2026-06-18 (sous-tranche 6)
+
 ### Migrer le stockage des images R2 → Vercel Blob
 - **Fichiers** : `src/lib/r2.ts`, vars `R2_*` dans `src/lib/env.ts`
 - **Constat** : les images de spots sont stockées sur Cloudflare R2 (bucket `fishspot-images`). Pendant la migration Mapbox→MapLibre, on a fait le choix de Vercel Blob pour les PMTiles afin de garder un seul vendeur. Les images restent sur R2 pour ne pas alourdir le chantier.
@@ -118,3 +125,13 @@
 - **Détecté** : 2026-04-26 (onboarding)
 
 ## Resolved (archive 30 jours avant suppression)
+
+### Enregistrer / Itinéraire — câblage liste + fiche (sous-tranche 7) — RÉSOLU 2026-06-18
+- **Fichiers** : `src/components/spots/SpotCard.tsx`, `src/components/spots/SpotDetail.tsx`
+- **Résolution** : `SpotCard` câble désormais `<SaveSpotButton variant="compact">` + un lien Itinéraire (`buildDirectionsUrl`) dans une barre d'actions **sortie du `<Link>`** (le `<Link>` est passé en stretched-link `after:absolute after:inset-0`, les actions sont en frère/sœur `relative z-10` → aucune ancre imbriquée, aucun clic action ne navigue). `SpotDetail` remplace le bouton inerte par `<SaveSpotButton>` et centralise le lien Itinéraire en dur sur `buildDirectionsUrl`. Enregistrer/Itinéraire sont maintenant disponibles depuis le marqueur, la liste ET la fiche, sans ouvrir la fiche.
+- **Détecté** : 2026-06-18 (sous-tranche 6) · **Résolu** : 2026-06-18 (sous-tranche 7)
+
+### Toast « Annuler » dédié (action in-toast) — RÉSOLU 2026-06-18
+- **Fichiers** : `src/store/notification.store.ts`, `src/components/ui/toast.tsx`, `src/components/spots/SaveSpotButton.tsx`
+- **Résolution** : ajout d'un champ optionnel `action?: ToastAction` (`{ label; onClick }`) au `Toast` (non-breaking), rendu comme bouton « Annuler » dans `ToastContainer`. `SaveSpotButton` passe `action: { label: 'Annuler', onClick: handleRemove }` au toast de succès → undo immédiat depuis le toast, en plus de la bascule du bouton. Couvert par `tests/unit/store/notification-toast-action.test.ts`.
+- **Détecté** : 2026-06-18 (sous-tranche 6) · **Résolu** : 2026-06-18 (sous-tranche 7)
