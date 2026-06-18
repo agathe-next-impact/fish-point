@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Map, BookOpen, Plus, BarChart3, User } from 'lucide-react';
+import { Compass, BookOpen, Plus, BarChart3, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const tabs = [
-  { href: '/map', label: 'Carte', icon: Map },
+  { href: '/spots', label: 'Explorer', icon: Compass },
   { href: '/catches', label: 'Prises', icon: BookOpen },
   { href: '/dashboard', label: 'Stats', icon: BarChart3 },
   { href: '/profile', label: 'Profil', icon: User },
@@ -59,7 +59,7 @@ function TabLink({
 }: {
   href: string;
   label: string;
-  icon: typeof Map;
+  icon: typeof Compass;
   active: boolean;
 }) {
   return (

@@ -1,10 +1,10 @@
 'use client';
 
-import { Star, MapPin, Check, Heart, Navigation, Eye, Database, Accessibility, ParkingCircle, Ship, Moon } from 'lucide-react';
+import { MapPin, Check, Heart, Navigation, Eye, Database, Accessibility, ParkingCircle, Ship, Moon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ScoreBadge } from '@/components/ui/score-badge';
 import { AccessTag } from '@/components/ui/access-tag';
+import { SpotScorePanel } from './SpotScorePanel';
 import { WATER_TYPE_LABELS, FISHING_TYPE_LABELS } from '@/lib/constants';
 import { getDepartmentName } from '@/config/departments';
 import { formatDate } from '@/lib/utils';
@@ -25,11 +25,21 @@ import { SpotProtectedZones } from './SpotProtectedZones';
 import { SpotGallery } from './SpotGallery';
 import type { SpotDetail as SpotDetailType } from '@/types/spot';
 
-interface SpotDetailProps {
-  spot: SpotDetailType;
+interface ReliabilitySignals {
+  accessConfidence: number | null;
+  lastCheckedAt: string | null;
+  scoreUpdatedAt: string | null;
+  speciesCount: number;
+  hasWaterQuality: boolean;
+  hasObservations: boolean;
 }
 
-export function SpotDetail({ spot }: SpotDetailProps) {
+interface SpotDetailProps {
+  spot: SpotDetailType;
+  reliability: ReliabilitySignals;
+}
+
+export function SpotDetail({ spot, reliability }: SpotDetailProps) {
   return (
     <div className="max-w-4xl mx-auto">
       {/* Drought restriction banner (go/no-go) */}
@@ -41,41 +51,44 @@ export function SpotDetail({ spot }: SpotDetailProps) {
       </div>
 
       {/* Title section */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-3">
-          {spot.fishabilityScore != null && <ScoreBadge score={spot.fishabilityScore} size="lg" />}
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="fs-dsp text-2xl font-extrabold text-ink sm:text-3xl">{spot.name}</h1>
-              {spot.isVerified && <Check className="h-5 w-5 text-fs-accent" />}
-            </div>
-            <div className="mt-1 flex items-center gap-2 text-fs-muted">
-              <MapPin className="h-4 w-4" strokeWidth={1.9} />
-              <span>{spot.commune ? `${spot.commune}, ` : ''}{getDepartmentName(spot.department)} ({spot.department})</span>
-            </div>
-            <div className="mt-2 flex items-center gap-3">
-              <AccessTag accessType={spot.accessType} />
-              {spot.averageRating > 0 && (
-                <span className="flex items-center gap-1">
-                  <Star className="h-4 w-4 fill-amber text-amber" />
-                  <span className="font-semibold text-ink">{spot.averageRating.toFixed(1)}</span>
-                  <span className="text-sm text-fs-muted">({spot.reviewCount} avis)</span>
-                </span>
-              )}
-              <span className="flex items-center gap-1 text-sm text-fs-muted">
-                <Eye className="h-3.5 w-3.5" /> {spot.viewCount} vues
-              </span>
-            </div>
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="fs-dsp text-2xl font-extrabold text-ink sm:text-3xl">{spot.name}</h1>
+            {spot.isVerified && <Check className="h-5 w-5 text-fs-accent" aria-label="Spot vérifié" />}
+          </div>
+          <div className="mt-1 flex items-center gap-2 text-fs-muted">
+            <MapPin className="h-4 w-4" strokeWidth={1.9} aria-hidden />
+            <span>{spot.commune ? `${spot.commune}, ` : ''}{getDepartmentName(spot.department)} ({spot.department})</span>
+          </div>
+          <div className="mt-2">
+            <AccessTag accessType={spot.accessType} />
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">
-            <Heart className="h-4 w-4" /> Favoris
+            <Heart className="h-4 w-4" /> Enregistrer
           </Button>
           <SpotShareButton spotName={spot.name} spotSlug={spot.slug} />
         </div>
       </div>
+
+      {/* Trois indicateurs distincts : indice de pêche · note communauté · fiabilité */}
+      <div className="mb-3">
+        <SpotScorePanel
+          spotId={spot.id}
+          fishabilityScore={spot.fishabilityScore}
+          averageRating={spot.averageRating}
+          reviewCount={spot.reviewCount}
+          reliability={reliability}
+        />
+      </div>
+
+      {/* Vues = popularité de page, pas un indicateur de qualité → rétrogradé */}
+      <p className="mb-6 flex items-center gap-1 text-xs text-faint">
+        <Eye className="h-3 w-3" aria-hidden /> {spot.viewCount} vues — popularité de la page
+      </p>
 
       {/* Info */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

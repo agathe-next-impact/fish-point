@@ -25,6 +25,7 @@ export default async function SpotPage({ params }: SpotPageProps) {
       images: { orderBy: { isPrimary: 'desc' } },
       species: { include: { species: true } },
       regulations: { where: { isActive: true } },
+      _count: { select: { speciesObservations: true, waterQualityData: true } },
     },
   });
 
@@ -87,9 +88,18 @@ export default async function SpotPage({ params }: SpotPageProps) {
     })),
   };
 
+  const reliabilitySignals = {
+    accessConfidence: spotData.accessDetails?.confidence ?? null,
+    lastCheckedAt: spotData.accessDetails?.lastCheckedAt ?? null,
+    scoreUpdatedAt: spot.scoreUpdatedAt?.toISOString() ?? null,
+    speciesCount: spot.species.length,
+    hasWaterQuality: spot._count.waterQualityData > 0,
+    hasObservations: spot._count.speciesObservations > 0,
+  };
+
   return (
     <div className="container mx-auto px-4 py-6">
-      <SpotDetail spot={spotData} />
+      <SpotDetail spot={spotData} reliability={reliabilitySignals} />
     </div>
   );
 }

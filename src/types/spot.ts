@@ -120,6 +120,11 @@ export interface SpotFilters {
   radius?: number;
   lat?: number;
   lng?: number;
+  /** Bornes géographiques (zone Explorer committée) — bornent la liste à la fenêtre carte. */
+  north?: number;
+  south?: number;
+  east?: number;
+  west?: number;
 }
 
 export interface SpotCreateInput {

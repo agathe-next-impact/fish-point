@@ -29,6 +29,9 @@ export interface GeoJSONFeatureCollection {
 
 export type MapLayer = 'spots' | 'heatmap' | 'regulations' | 'satellite' | 'fishability' | 'privateSpots';
 
+/** Vue active de l'écran Explorer : liste de résultats ou carte. */
+export type ExplorerView = 'list' | 'map';
+
 export interface MapFiltersState {
   radius: number;
   waterTypes: string[];

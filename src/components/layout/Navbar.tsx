@@ -18,8 +18,7 @@ import { BrandLogo } from './BrandLogo';
 import { cn } from '@/lib/utils';
 
 const NAV_LINKS = [
-  { href: '/map', label: 'Carte' },
-  { href: '/spots', label: 'Spots' },
+  { href: '/spots', label: 'Explorer' },
   { href: '/explore', label: 'Par département' },
   { href: '/regulations', label: 'Réglementation' },
 ];
