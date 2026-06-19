@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { Bookmark, MapPin, Navigation, Route, LocateFixed, Loader2 } from 'lucide-react';
+import { Bookmark, List, Map as MapIcon, MapPin, Navigation, Route, LocateFixed, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useSavedSpots, type SavedSpotView } from '@/hooks/useSavedSpots';
+import { SavedSpotsMap } from '@/components/spots/SavedSpotsMap';
 import { buildDirectionsUrl } from '@/lib/directions';
 import { formatDistance } from '@/lib/map';
 import { WATER_TYPE_LABELS } from '@/lib/constants';
@@ -14,12 +15,17 @@ import { getDepartmentName } from '@/config/departments';
 import { formatSpotName } from '@/lib/spot-name';
 import { deriveCollections } from '@/lib/collections';
 
+/** Vue de l'espace Enregistrés : état LOCAL, indépendant du store Explorer. */
+type SavedView = 'list' | 'map';
+
 /**
  * Espace « Enregistrés » (slice P1.1) — la liste des spots qu'un pêcheur a mis de
  * côté pour préparer une sortie. Deux sources transparentes : serveur (connecté)
  * ou local (invité), fusionnées par `useSavedSpots`. Tri par distance dès que la
- * géoloc est accordée. La carte des seuls spots enregistrés arrive en slice 1b
- * (MapContainer rend les marqueurs via tuiles MVT globales, pas une sélection).
+ * géoloc est accordée. Sélecteur Liste / Carte (slice 1b) : la vue Carte rend
+ * `SavedSpotsMap`, un composant à marqueurs EXPLICITES (un par spot enregistré),
+ * car `MapContainer` sert ses marqueurs via tuiles MVT globales et ne peut pas se
+ * restreindre à une sélection. Les onglets de collection filtrent les DEUX vues.
  */
 export default function SavedSpotsPage() {
   const { latitude, longitude, loading: geoLoading, error: geoError, requestPosition } = useGeolocation();
@@ -35,6 +41,9 @@ export default function SavedSpotsPage() {
   // on ne synchronise pas via effet — si la collection disparaît, `effectiveCollection`
   // retombe sur « Tous » par dérivation (évite tout setState dans un effet).
   const [activeCollection, setActiveCollection] = useState<string | null>(null);
+
+  // Vue Liste / Carte. État LOCAL `useState`, indépendant du store Explorer.
+  const [view, setView] = useState<SavedView>('list');
 
   // Collections distinctes dérivées des `listName` présents (« Favoris » d'abord).
   const collections = useMemo(() => deriveCollections(spots), [spots]);
@@ -69,6 +78,8 @@ export default function SavedSpotsPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <ViewToggle view={view} onChange={setView} />
+
           <Button
             variant="outline"
             size="sm"
@@ -156,6 +167,10 @@ export default function SavedSpotsPage() {
             <p className="py-12 text-center text-fs-muted">
               Aucun spot dans cette collection pour le moment.
             </p>
+          ) : view === 'map' ? (
+            <div className="h-[60vh] min-h-[360px] overflow-hidden rounded-fs-lg border border-line shadow-fs-sm">
+              <SavedSpotsMap spots={visibleSpots} />
+            </div>
           ) : (
             <ul className="grid gap-3">
               {visibleSpots.map((spot) => (
@@ -261,6 +276,64 @@ function CollectionTab({
     >
       {label}
       <span className={active ? 'text-white/80' : 'text-fs-muted/70'}>{count}</span>
+    </button>
+  );
+}
+
+/**
+ * Sélecteur de vue Liste / Carte. `aria-pressed` (deux boutons-bascule), groupés
+ * sous un `aria-label` ; ce sont des filtres d'affichage, pas un formulaire radio.
+ */
+function ViewToggle({ view, onChange }: { view: SavedView; onChange: (v: SavedView) => void }) {
+  return (
+    <div
+      className="inline-flex rounded-md border border-line bg-card p-0.5"
+      role="group"
+      aria-label="Affichage des spots enregistrés"
+    >
+      <ViewToggleButton
+        active={view === 'list'}
+        onClick={() => onChange('list')}
+        label="Liste"
+      >
+        <List className="h-4 w-4" strokeWidth={2} aria-hidden />
+      </ViewToggleButton>
+      <ViewToggleButton
+        active={view === 'map'}
+        onClick={() => onChange('map')}
+        label="Carte"
+      >
+        <MapIcon className="h-4 w-4" strokeWidth={2} aria-hidden />
+      </ViewToggleButton>
+    </div>
+  );
+}
+
+function ViewToggleButton({
+  active,
+  onClick,
+  label,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      aria-label={`Vue ${label}`}
+      className={
+        active
+          ? 'inline-flex items-center gap-1.5 rounded-[5px] bg-fs-accent px-2.5 py-1 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+          : 'inline-flex items-center gap-1.5 rounded-[5px] px-2.5 py-1 text-sm font-semibold text-fs-muted transition-colors hover:text-fs-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+      }
+    >
+      {children}
+      <span className="hidden sm:inline">{label}</span>
     </button>
   );
 }

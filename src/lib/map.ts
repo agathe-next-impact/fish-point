@@ -154,3 +154,63 @@ export function calculateBounds(
     west: Math.min(...lngs) - padding,
   };
 }
+
+/** Coin SO/NE attendu par MapLibre `fitBounds` : `[[west, south], [east, north]]`. */
+export type LngLatBoundsTuple = [[number, number], [number, number]];
+
+/** Caméra initiale dérivée d'un ensemble de points pour la carte des enregistrés. */
+export type SavedSpotsCamera =
+  | { kind: 'bounds'; bounds: LngLatBoundsTuple }
+  | { kind: 'center'; longitude: number; latitude: number; zoom: number };
+
+/** Niveau de zoom quand on centre sur un point unique (ou des points confondus). */
+const SINGLE_SPOT_ZOOM = 12;
+
+/**
+ * Dérive la caméra initiale de `SavedSpotsMap` à partir des coordonnées affichées.
+ * PURE (aucun I/O, aucune dépendance MapLibre) — testable isolément.
+ *
+ * - 0 spot   → centre `DEFAULT_CENTER` (zoom France), aucune enveloppe à cadrer.
+ * - 1 spot   → centre sur le point, zoom rapproché (`fitBounds` sur un point unique
+ *              produirait une enveloppe dégénérée et un zoom max inutilisable).
+ * - ≥2 points distincts → enveloppe `[[west, south], [east, north]]` pour `fitBounds`.
+ * - ≥2 points TOUS confondus → traités comme 1 spot (centre + zoom), pas une bbox plate.
+ *
+ * Les coordonnées non finies sont ignorées (robustesse face à des données partielles).
+ */
+export function savedSpotsCamera(
+  points: { latitude: number; longitude: number }[],
+): SavedSpotsCamera {
+  const valid = points.filter(
+    (p) => Number.isFinite(p.latitude) && Number.isFinite(p.longitude),
+  );
+
+  if (valid.length === 0) {
+    return {
+      kind: 'center',
+      longitude: DEFAULT_CENTER.longitude,
+      latitude: DEFAULT_CENTER.latitude,
+      zoom: DEFAULT_CENTER.zoom,
+    };
+  }
+
+  const lats = valid.map((p) => p.latitude);
+  const lngs = valid.map((p) => p.longitude);
+  const south = Math.min(...lats);
+  const north = Math.max(...lats);
+  const west = Math.min(...lngs);
+  const east = Math.max(...lngs);
+
+  // Enveloppe dégénérée (1 point, ou plusieurs confondus) → centre + zoom fixe.
+  if (south === north && west === east) {
+    return { kind: 'center', longitude: west, latitude: south, zoom: SINGLE_SPOT_ZOOM };
+  }
+
+  return {
+    kind: 'bounds',
+    bounds: [
+      [west, south],
+      [east, north],
+    ],
+  };
+}
