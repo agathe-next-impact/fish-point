@@ -14,8 +14,8 @@ describe('store Explorer — zone de recherche partagée carte ↔ liste', () =>
 
   beforeEach(() => {
     useMapStore.setState({ committedBounds: null, pendingBounds: null });
-    const { resetFilters, setExplorerView } = useMapStore.getState();
-    resetFilters();
+    const { setSelectedSpot, setExplorerView } = useMapStore.getState();
+    setSelectedSpot(null);
     setExplorerView('map');
   });
 
@@ -55,9 +55,12 @@ describe('store Explorer — zone de recherche partagée carte ↔ liste', () =>
     expect(useMapStore.getState().committedBounds).toBeNull();
   });
 
-  it('la recherche par zone préserve les filtres actifs', () => {
-    const { setFilters, setPendingBounds, commitBounds } = useMapStore.getState();
-    setFilters({ species: ['pike'], minFishabilityScore: 60 });
+  it('la recherche par zone préserve la sélection (état store hors zone non touché)', () => {
+    // Les filtres « sortie » vivent dans `gridFilters` (state React Explorer) depuis la
+    // sous-étape 4. L'invariant store ici : valider une zone ne réinitialise aucun autre
+    // slice — on le vérifie via la sélection de marqueur.
+    const { setSelectedSpot, setPendingBounds, commitBounds } = useMapStore.getState();
+    setSelectedSpot('spot-pike');
 
     setPendingBounds(ZONE_A);
     setPendingBounds(ZONE_B);
@@ -65,7 +68,6 @@ describe('store Explorer — zone de recherche partagée carte ↔ liste', () =>
 
     const state = useMapStore.getState();
     expect(state.committedBounds).toEqual(ZONE_B);
-    expect(state.filters.species).toEqual(['pike']);
-    expect(state.filters.minFishabilityScore).toBe(60);
+    expect(state.selectedSpotId).toBe('spot-pike');
   });
 });

@@ -114,6 +114,10 @@ export default function ExplorerPage() {
     boatLaunch: gridFilters.boatLaunch,
     pmr: gridFilters.pmr,
     nightFishing: gridFilters.nightFishing,
+    // Filtres exclusifs carte absorbés depuis l'ancien overlay : sérialisés vers les
+    // tuiles MVT (premiumOnly=true / origin=USER) que la route tuiles lit déjà.
+    premiumOnly: gridFilters.premiumOnly,
+    showAutoDiscovered: gridFilters.showAutoDiscovered,
   }), [debouncedSearch, gridFilters]);
 
   const {
@@ -146,6 +150,10 @@ export default function ExplorerPage() {
     gridFilters.nightFishing === true ||
     (gridFilters.lat !== undefined && gridFilters.lng !== undefined) ||
     gridFilters.minFishabilityScore !== undefined;
+  // NB : `premiumOnly`/`showAutoDiscovered` sont volontairement EXCLUS de ce calcul.
+  // Ils ne filtrent que la CARTE (tuiles MVT + couches heatmap/fishability), pas la liste
+  // `/api/spots` — ils ne peuvent donc pas vider la liste, donc ne justifient pas le CTA
+  // « relâcher les filtres » de l'état 0 spot.
   const isListEmpty = !isLoading && allSpots.length === 0;
 
   // Comptage des spots existant SANS la zone courante (mêmes filtres, sans bbox).

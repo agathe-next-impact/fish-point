@@ -50,9 +50,10 @@ export async function GET(
     const shared = parseSpotFilterParams(searchParams);
     const { modes, techniques } = splitFishingTypes(shared);
 
-    // Params spécifiques carte non couverts par la liste (panneau overlay MapFilters) :
-    // `origin`, `premiumOnly` et l'alias legacy `fishingType` (singulier, sans
-    // distinction mode/technique). Conservés pour ne pas régresser ce panneau.
+    // Filtres exclusifs carte, désormais émis par le contrôle UNIQUE `FilterRail` via le
+    // helper partagé `serializeSpotFilters` (sous-étape 4) : `origin=USER` (exclure les
+    // auto-découverts) et `premiumOnly=true`. L'alias legacy `fishingType` (singulier, sans
+    // distinction mode/technique) n'est plus émis ; toléré ici par robustesse (vieux liens).
     const origin = searchParams.get('origin');
     const premiumOnly = searchParams.get('premiumOnly') === 'true';
     const legacyFishingTypes = searchParams.getAll('fishingType').filter(Boolean);

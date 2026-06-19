@@ -52,6 +52,18 @@ export interface SpotQueryFilters {
   boatLaunch?: boolean;
   pmr?: boolean;
   nightFishing?: boolean;
+  /**
+   * Réservé aux spots premium. Sérialisé `premiumOnly=true`. Filtre exclusif
+   * carte (tuiles MVT + couches heatmap/fishability), absorbé depuis l'ancien
+   * panneau overlay `MapFilters` (sous-étape 4 : un seul état de filtres).
+   */
+  premiumOnly?: boolean;
+  /**
+   * Inclut les spots auto-découverts (origine ≠ `USER`). `true` par défaut côté UI.
+   * Quand `false`, sérialisé `origin=USER` (seuls les spots saisis par un pêcheur).
+   * Filtre exclusif carte, absorbé depuis l'ancien overlay `MapFilters`.
+   */
+  showAutoDiscovered?: boolean;
 }
 
 /**
@@ -86,6 +98,13 @@ export function serializeSpotFilters(filters: SpotQueryFilters): URLSearchParams
   for (const flag of ACCESSIBILITY_FLAGS) {
     if (filters[flag] === true) params.set(flag, 'true');
   }
+
+  // Filtres exclusifs carte (absorbés depuis l'ancien overlay `MapFilters`). On
+  // conserve EXACTEMENT les noms de params que la route tuiles lit déjà : `premiumOnly`
+  // et `origin=USER`. `showAutoDiscovered` est implicitement `true` (cas par défaut) :
+  // on ne pose `origin=USER` que pour l'exclusion explicite des spots auto-découverts.
+  if (filters.premiumOnly === true) params.set('premiumOnly', 'true');
+  if (filters.showAutoDiscovered === false) params.set('origin', 'USER');
 
   return params;
 }
@@ -127,6 +146,10 @@ export function parseSpotFilterParams(searchParams: URLSearchParams): SpotQueryF
     boatLaunch: searchParams.get('boatLaunch') === 'true' || undefined,
     pmr: searchParams.get('pmr') === 'true' || undefined,
     nightFishing: searchParams.get('nightFishing') === 'true' || undefined,
+    // Filtres exclusifs carte (overlay absorbé) : `premiumOnly=true` et `origin=USER`
+    // (⇔ exclure les auto-découverts). Symétrique de la sérialisation ci-dessus.
+    premiumOnly: searchParams.get('premiumOnly') === 'true' || undefined,
+    showAutoDiscovered: searchParams.get('origin') === 'USER' ? false : undefined,
   };
 }
 

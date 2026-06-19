@@ -49,6 +49,14 @@ export interface GridFilters {
   boatLaunch?: boolean;
   pmr?: boolean;
   nightFishing?: boolean;
+  // ── Filtres exclusifs carte (absorbés depuis l'ancien overlay MapFilters) ──
+  /** Restreint aux spots premium. */
+  premiumOnly?: boolean;
+  /**
+   * Inclut les spots auto-découverts (origine ≠ USER). `true` = comportement par
+   * défaut (tout afficher) ; `false` = uniquement les spots saisis par un pêcheur.
+   */
+  showAutoDiscovered?: boolean;
 }
 
 export const EMPTY_FILTERS: GridFilters = {
@@ -69,6 +77,10 @@ export const EMPTY_FILTERS: GridFilters = {
   boatLaunch: undefined,
   pmr: undefined,
   nightFishing: undefined,
+  premiumOnly: undefined,
+  // `true` par défaut : on affiche les spots auto-découverts (parité avec l'ancien
+  // overlay `MapFilters`, dont `showAutoDiscovered` valait `true` par défaut).
+  showAutoDiscovered: true,
 };
 
 interface SpotGridFiltersProps {

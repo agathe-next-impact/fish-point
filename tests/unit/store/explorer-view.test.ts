@@ -7,8 +7,8 @@ import { useMapStore } from '@/store/map.store';
  */
 describe('store Explorer — bascule de vue + persistance des filtres', () => {
   beforeEach(() => {
-    const { resetFilters, setExplorerView } = useMapStore.getState();
-    resetFilters();
+    const { setSelectedSpot, setExplorerView } = useMapStore.getState();
+    setSelectedSpot(null);
     setExplorerView('list');
   });
 
@@ -26,22 +26,22 @@ describe('store Explorer — bascule de vue + persistance des filtres', () => {
     expect(useMapStore.getState().explorerView).toBe('list');
   });
 
-  it('conserve les filtres au changement de vue', () => {
-    const { setFilters, setExplorerView } = useMapStore.getState();
+  it('conserve la sélection de spot au changement de vue (état store non réinitialisé)', () => {
+    // Depuis la sous-étape 4, l'état de filtres vit dans `gridFilters` (state React de
+    // l'Explorer), plus dans le store. L'invariant store à protéger : basculer de vue ne
+    // doit réinitialiser AUCUN autre slice — ici la sélection de marqueur.
+    const { setSelectedSpot, setExplorerView } = useMapStore.getState();
 
-    setFilters({ species: ['pike'], minFishabilityScore: 60 });
+    setSelectedSpot('spot-pike');
     setExplorerView('map');
 
     const stateAfterToggle = useMapStore.getState();
     expect(stateAfterToggle.explorerView).toBe('map');
-    expect(stateAfterToggle.filters.species).toEqual(['pike']);
-    expect(stateAfterToggle.filters.minFishabilityScore).toBe(60);
+    expect(stateAfterToggle.selectedSpotId).toBe('spot-pike');
 
-    // Retour en liste : les filtres tiennent toujours.
+    // Retour en liste : la sélection tient toujours.
     setExplorerView('list');
-    const stateBack = useMapStore.getState();
-    expect(stateBack.filters.species).toEqual(['pike']);
-    expect(stateBack.filters.minFishabilityScore).toBe(60);
+    expect(useMapStore.getState().selectedSpotId).toBe('spot-pike');
   });
 
   it('ne touche pas à la sélection ni au viewport en changeant de vue', () => {

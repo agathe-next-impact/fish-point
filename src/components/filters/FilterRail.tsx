@@ -261,6 +261,8 @@ export function FilterRail({ filters, onChange, className }: FilterRailProps) {
     filters.boatLaunch === true ||
     filters.pmr === true ||
     filters.nightFishing === true ||
+    filters.premiumOnly === true ||
+    filters.showAutoDiscovered === false ||
     filters.minFishabilityScore !== undefined;
 
   const minScore = filters.minFishabilityScore ?? 0;
@@ -502,6 +504,33 @@ export function FilterRail({ filters, onChange, className }: FilterRailProps) {
                 onToggle={() => onChange({ ...filters, [key]: filters[key] === true ? undefined : true })}
               />
             ))}
+          </div>
+        </fieldset>
+
+        {/* Affichage — filtres exclusifs carte (absorbés de l'ancien overlay MapFilters) */}
+        <fieldset className="border-0 p-0">
+          <legend className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.04em] text-fs-faint">
+            Affichage
+          </legend>
+          <div className="space-y-1">
+            <CheckRow
+              label="Spots premium uniquement"
+              checked={filters.premiumOnly === true}
+              onToggle={() =>
+                onChange({ ...filters, premiumOnly: filters.premiumOnly === true ? undefined : true })
+              }
+            />
+            <CheckRow
+              label="Masquer les spots auto-découverts"
+              checked={filters.showAutoDiscovered === false}
+              onToggle={() =>
+                onChange({
+                  ...filters,
+                  // Coché ⇒ on exclut les auto-découverts (origin=USER) ; décoché ⇒ tout afficher.
+                  showAutoDiscovered: filters.showAutoDiscovered === false ? true : false,
+                })
+              }
+            />
           </div>
         </fieldset>
 

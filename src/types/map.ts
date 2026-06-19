@@ -31,16 +31,3 @@ export type MapLayer = 'spots' | 'heatmap' | 'regulations' | 'satellite' | 'fish
 
 /** Vue active de l'écran Explorer : liste de résultats ou carte. */
 export type ExplorerView = 'list' | 'map';
-
-export interface MapFiltersState {
-  radius: number;
-  waterTypes: string[];
-  fishingTypes: string[];
-  species: string[];
-  minRating: number;
-  minFishabilityScore: number;
-  showAutoDiscovered: boolean;
-  pmr: boolean;
-  nightFishing: boolean;
-  premiumOnly: boolean;
-}

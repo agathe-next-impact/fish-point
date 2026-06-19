@@ -1,12 +1,10 @@
 import { create } from 'zustand';
-import type { MapViewport, MapLayer, MapFiltersState, ExplorerView, MapBounds } from '@/types/map';
+import type { MapViewport, MapLayer, ExplorerView, MapBounds } from '@/types/map';
 
 interface MapState {
   viewport: MapViewport;
   selectedSpotId: string | null;
   activeLayers: MapLayer[];
-  filters: MapFiltersState;
-  isFiltersOpen: boolean;
   /** Vue active de l'écran Explorer (liste ou carte) — persiste au changement de vue. */
   explorerView: ExplorerView;
   /**
@@ -24,9 +22,6 @@ interface MapState {
   setViewport: (viewport: Partial<MapViewport>) => void;
   setSelectedSpot: (spotId: string | null) => void;
   toggleLayer: (layer: MapLayer) => void;
-  setFilters: (filters: Partial<MapFiltersState>) => void;
-  resetFilters: () => void;
-  setFiltersOpen: (open: boolean) => void;
   setExplorerView: (view: ExplorerView) => void;
   /** Mémorise la zone survolée (pan/zoom) sans déclencher de recherche. */
   setPendingBounds: (bounds: MapBounds) => void;
@@ -40,19 +35,6 @@ interface MapState {
   clearCommittedBounds: () => void;
 }
 
-const DEFAULT_FILTERS: MapFiltersState = {
-  radius: 10000,
-  waterTypes: [],
-  fishingTypes: [],
-  species: [],
-  minRating: 0,
-  minFishabilityScore: 0,
-  showAutoDiscovered: true,
-  pmr: false,
-  nightFishing: false,
-  premiumOnly: false,
-};
-
 export const useMapStore = create<MapState>((set) => ({
   viewport: {
     latitude: 46.603354,
@@ -61,8 +43,6 @@ export const useMapStore = create<MapState>((set) => ({
   },
   selectedSpotId: null,
   activeLayers: ['spots'],
-  filters: DEFAULT_FILTERS,
-  isFiltersOpen: false,
   explorerView: 'list',
   committedBounds: null,
   pendingBounds: null,
@@ -78,13 +58,6 @@ export const useMapStore = create<MapState>((set) => ({
         ? state.activeLayers.filter((l) => l !== layer)
         : [...state.activeLayers, layer],
     })),
-
-  setFilters: (filters) =>
-    set((state) => ({ filters: { ...state.filters, ...filters } })),
-
-  resetFilters: () => set({ filters: DEFAULT_FILTERS }),
-
-  setFiltersOpen: (open) => set({ isFiltersOpen: open }),
 
   setExplorerView: (view) => set({ explorerView: view }),
 

@@ -142,6 +142,44 @@ describe('round-trip serialize → parse (liste et carte parlent le même vocabu
   });
 });
 
+describe('absorption des filtres exclusifs carte (ancien overlay MapFilters → FilterRail)', () => {
+  // Contrat critique de la sous-étape 4 : `premiumOnly` et `showAutoDiscovered` ont migré
+  // de l'overlay supprimé vers le contrôle unique FilterRail. Ils doivent se sérialiser
+  // EXACTEMENT vers les params que la route tuiles `/api/spots/tiles` lit déjà :
+  // `premiumOnly=true` et `origin=USER` (⇔ exclure les spots auto-découverts).
+  it('sérialise premiumOnly=true et origin=USER (params lus par la route tuiles)', () => {
+    const params = serializeSpotFilters({ premiumOnly: true, showAutoDiscovered: false });
+    expect(params.get('premiumOnly')).toBe('true');
+    expect(params.get('origin')).toBe('USER');
+  });
+
+  it('n’émet aucun param quand premium est faux et auto-découverts affichés (cas par défaut)', () => {
+    // showAutoDiscovered=true est le défaut « tout afficher » : pas de contrainte origin.
+    const params = serializeSpotFilters({ premiumOnly: false, showAutoDiscovered: true });
+    expect(params.get('premiumOnly')).toBeNull();
+    expect(params.get('origin')).toBeNull();
+  });
+
+  it('parse premiumOnly et origin=USER vers le modèle canonique', () => {
+    const parsed = parseSpotFilterParams(
+      new URLSearchParams({ premiumOnly: 'true', origin: 'USER' }),
+    );
+    expect(parsed.premiumOnly).toBe(true);
+    expect(parsed.showAutoDiscovered).toBe(false);
+  });
+
+  it('origin absent → showAutoDiscovered undefined (auto-découverts inclus par défaut)', () => {
+    const parsed = parseSpotFilterParams(new URLSearchParams());
+    expect(parsed.premiumOnly).toBeUndefined();
+    expect(parsed.showAutoDiscovered).toBeUndefined();
+  });
+
+  it('round-trip : premiumOnly + exclusion des auto-découverts est préservé', () => {
+    const filters: SpotQueryFilters = { premiumOnly: true, showAutoDiscovered: false };
+    expect(parseSpotFilterParams(serializeSpotFilters(filters))).toEqual(filters);
+  });
+});
+
 describe('helpers WHERE partagés', () => {
   it('splitFishingTypes répartit modes et techniques en écartant les inconnus', () => {
     const { modes, techniques } = splitFishingTypes({

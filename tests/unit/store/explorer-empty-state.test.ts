@@ -13,7 +13,7 @@ describe('store Explorer — relâche de zone depuis l’état 0 spot', () => {
 
   beforeEach(() => {
     useMapStore.setState({ committedBounds: null, pendingBounds: null });
-    useMapStore.getState().resetFilters();
+    useMapStore.getState().setSelectedSpot(null);
   });
 
   it('clearCommittedBounds relâche committed ET pending → liste nationale', () => {
@@ -29,17 +29,18 @@ describe('store Explorer — relâche de zone depuis l’état 0 spot', () => {
     expect(state.pendingBounds).toBeNull();
   });
 
-  it('élargir la zone ne réinitialise pas les filtres actifs', () => {
-    const { setFilters, setPendingBounds, clearCommittedBounds } = useMapStore.getState();
-    setFilters({ species: ['pike'], minFishabilityScore: 60 });
+  it('élargir la zone ne réinitialise pas les autres états du store', () => {
+    // Les filtres « sortie » vivent dans `gridFilters` (state React Explorer) depuis la
+    // sous-étape 4 ; relâcher la zone ne touche aucun autre slice — vérifié via la sélection.
+    const { setSelectedSpot, setPendingBounds, clearCommittedBounds } = useMapStore.getState();
+    setSelectedSpot('spot-pike');
     setPendingBounds(ZONE);
 
     clearCommittedBounds();
 
     const state = useMapStore.getState();
     expect(state.committedBounds).toBeNull();
-    expect(state.filters.species).toEqual(['pike']);
-    expect(state.filters.minFishabilityScore).toBe(60);
+    expect(state.selectedSpotId).toBe('spot-pike');
   });
 
   it('après relâche, un nouveau cadrage re-borne la liste (premier cadrage adopté)', () => {

@@ -25,7 +25,6 @@ import {
   type SelectedTileSpot,
 } from './SpotLayer';
 import { MapControls } from './MapControls';
-import { MapFilters } from './MapFilters';
 import { UserLocation } from './UserLocation';
 import { HeatmapLayer } from './HeatmapLayer';
 import { FishabilityLayer } from './FishabilityLayer';
@@ -50,13 +49,16 @@ interface MapContainerProps {
   isLoading?: boolean;
   className?: string;
   /**
-   * Filtres « sortie » de l'Explorer (source d'état partagée avec la liste). Quand fournis,
-   * ils sont sérialisés dans l'URL des tuiles MVT pour que les MARQUEURS de la carte
-   * appliquent exactement les mêmes filtres que la liste (convergence carte ↔ liste).
-   * Absents (carte autonome `/map`) : on retombe sur les filtres du store `MapFiltersState`.
+   * Filtres « sortie » de l'Explorer — source d'état UNIQUE partagée avec la liste.
+   * Sérialisés dans l'URL des tuiles MVT (marqueurs) ET appliqués au filtre JS des
+   * couches heatmap/fishability, pour que carte et liste appliquent exactement les
+   * mêmes filtres (convergence carte ↔ liste, sous-étape 4 : un seul état de filtres).
+   * Optionnel par robustesse : absent ⇒ aucun filtre (la carte affiche tout).
    */
   spotFilters?: SpotQueryFilters;
 }
+
+const EMPTY_SPOT_FILTERS: SpotQueryFilters = {};
 
 export function MapContainer({
   spots = [],
@@ -70,7 +72,9 @@ export function MapContainer({
   const viewport = useMapStore((s) => s.viewport);
   const setViewport = useMapStore((s) => s.setViewport);
   const activeLayers = useMapStore((s) => s.activeLayers);
-  const filters = useMapStore((s) => s.filters);
+  // Source d'état UNIQUE : les filtres viennent du prop unifié `spotFilters`
+  // (gridFilters de l'Explorer). Plus de slice `filters` dans le store map.
+  const activeFilters = spotFilters ?? EMPTY_SPOT_FILTERS;
   const [styleKey, setStyleKey] = useState<MapStyleKey>(MAP_STYLE_KEYS.vector);
   const [selectedSpot, setSelectedSpot] = useState<SelectedTileSpot | null>(null);
 
@@ -79,63 +83,50 @@ export function MapContainer({
     [styleKey],
   );
 
-  const filteredSpots = useMemo(
-    () =>
-      spots.filter((spot) => {
-        if (filters.waterTypes.length > 0 && !filters.waterTypes.includes(spot.waterType)) return false;
-        if (
-          filters.fishingTypes.length > 0 &&
-          !spot.fishingTypes.some((type) => filters.fishingTypes.includes(type))
-        ) {
-          return false;
-        }
-        if (filters.minRating > 0 && spot.averageRating < filters.minRating) return false;
-        if (
-          filters.minFishabilityScore > 0 &&
-          (spot.fishabilityScore == null || spot.fishabilityScore < filters.minFishabilityScore)
-        ) {
-          return false;
-        }
-        if (!filters.showAutoDiscovered && spot.dataOrigin !== 'USER') return false;
-        if (filters.pmr && !spot.accessibility?.pmr) return false;
-        if (filters.nightFishing && !spot.accessibility?.nightFishing) return false;
-        if (filters.premiumOnly && !spot.isPremium) return false;
-        return true;
-      }),
-    [filters, spots],
-  );
+  // Filtre JS client pour les couches heatmap/fishability (les marqueurs MVT, eux,
+  // sont filtrés côté serveur par les tuiles). Dérivé des filtres UNIFIÉS `activeFilters` :
+  // mêmes filtres que la liste et que les tuiles, plus aucune divergence d'état.
+  // NOTE (sous-étape 5) : cette copie JS pourra disparaître au profit des tuiles seules.
+  const filteredSpots = useMemo(() => {
+    const waterTypes = activeFilters.waterType ?? [];
+    // Mode et technique ciblent la même colonne `fishingTypes` ; intersection des deux
+    // intentions, à l'identique de `buildSpotWhere` (hasSome modes ET hasSome techniques).
+    const modes = activeFilters.fishingMode ?? [];
+    const techniques = activeFilters.fishingTechnique ?? [];
+    const minRating = activeFilters.minRating ?? 0;
+    const minScore = activeFilters.minFishabilityScore ?? 0;
+
+    return spots.filter((spot) => {
+      if (waterTypes.length > 0 && !waterTypes.includes(spot.waterType)) return false;
+      if (modes.length > 0 && !spot.fishingTypes.some((t) => modes.includes(t))) return false;
+      if (techniques.length > 0 && !spot.fishingTypes.some((t) => techniques.includes(t))) {
+        return false;
+      }
+      if (minRating > 0 && spot.averageRating < minRating) return false;
+      if (
+        minScore > 0 &&
+        (spot.fishabilityScore == null || spot.fishabilityScore < minScore)
+      ) {
+        return false;
+      }
+      if (activeFilters.showAutoDiscovered === false && spot.dataOrigin !== 'USER') return false;
+      if (activeFilters.pmr && !spot.accessibility?.pmr) return false;
+      if (activeFilters.nightFishing && !spot.accessibility?.nightFishing) return false;
+      if (activeFilters.premiumOnly && !spot.isPremium) return false;
+      return true;
+    });
+  }, [activeFilters, spots]);
 
   const spotTileUrl = useMemo(() => {
-    // Source d'état UNIFIÉE : quand l'Explorer fournit `spotFilters` (les mêmes filtres
-    // que la liste envoie à /api/spots), on les sérialise via le helper PARTAGÉ pour que
-    // les marqueurs MVT honorent espèce/mode/technique/accès — fin de la divergence.
-    // Sinon (carte autonome /map), on retombe sur les filtres du store `MapFiltersState`.
-    let params: URLSearchParams;
-    if (spotFilters) {
-      params = serializeSpotFilters(spotFilters);
-    } else {
-      // Carte autonome `/map` : on conserve EXACTEMENT la sémantique historique du store
-      // (`fishingTypes` plat envoyé via l'alias legacy `fishingType` = match ANY type, pas
-      // l'intersection mode∧technique de la liste). Aucune régression de comportement /map.
-      params = serializeSpotFilters({
-        waterType: filters.waterTypes,
-        minRating: filters.minRating,
-        minFishabilityScore: filters.minFishabilityScore,
-        pmr: filters.pmr,
-        nightFishing: filters.nightFishing,
-      });
-      filters.fishingTypes.forEach((type) => params.append('fishingType', type));
-    }
-
-    // Params propres au panneau overlay carte (MapFilters), absents du modèle liste :
-    // ils restent pilotés par le store et s'ajoutent quelle que soit la source ci-dessus.
-    if (!filters.showAutoDiscovered) params.set('origin', 'USER');
-    if (filters.premiumOnly) params.set('premiumOnly', 'true');
-
+    // Source d'état UNIFIÉE : les marqueurs MVT honorent EXACTEMENT les filtres de la liste
+    // (espèce/mode/technique/accès + premium/auto-découverts), sérialisés via le helper
+    // PARTAGÉ `serializeSpotFilters` — fin de la divergence carte ↔ liste. Plus de branche
+    // « carte autonome » : `/map` redirige vers l'Explorer (sous-étape 4).
+    const params = serializeSpotFilters(activeFilters);
     const suffix = params.size > 0 ? `?${params}` : '';
     const origin = typeof window === 'undefined' ? '' : window.location.origin;
     return `${origin}/api/spots/tiles/{z}/{x}/{y}.mvt${suffix}`;
-  }, [filters, spotFilters]);
+  }, [activeFilters]);
 
   const handleStyleChange = useCallback((next: MapStyleKey) => {
     setStyleKey(next);
@@ -247,7 +238,6 @@ export function MapContainer({
         visibleSpotCount={filteredSpots.length}
         isLoading={isLoading}
       />
-      <MapFilters />
     </div>
   );
 }
