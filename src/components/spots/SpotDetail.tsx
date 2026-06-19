@@ -25,6 +25,7 @@ import { SpotBiodiversity } from './SpotBiodiversity';
 import { SpotSolunar } from './SpotSolunar';
 import { SpotDroughtBanner } from './SpotDroughtBanner';
 import { SpotProtectedZones } from './SpotProtectedZones';
+import { SpotReviews } from './SpotReviews';
 import { SpotGallery } from './SpotGallery';
 import type { SpotDetail as SpotDetailType } from '@/types/spot';
 
@@ -185,6 +186,8 @@ export function SpotDetail({ spot, reliability }: SpotDetailProps) {
           <SpotProtectedZones spotId={spot.id} />
 
           <SpotRegulations regulations={spot.regulations} spotSlug={spot.slug} />
+
+          <SpotReviews spotId={spot.id} spotSlug={spot.slug} />
         </div>
 
         <div className="space-y-4">

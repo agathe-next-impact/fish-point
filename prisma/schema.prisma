@@ -277,6 +277,7 @@ model Review {
   cleanliness    Int?
   tranquility    Int?
   accessibility  Int?
+  dataAccuracy   Int?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

@@ -51,14 +51,17 @@ export async function POST(
       return NextResponse.json({ error: 'Validation error', details: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
+    // `undefined` (critère absent) → `null` : on persiste explicitement
+    // « non renseigné » plutôt que de laisser Prisma ignorer le champ.
     const review = await prisma.review.create({
       data: {
         rating: validation.data.rating,
-        comment: validation.data.comment,
-        fishDensity: validation.data.fishDensity,
-        cleanliness: validation.data.cleanliness,
-        tranquility: validation.data.tranquility,
-        accessibility: validation.data.accessibility,
+        comment: validation.data.comment ?? null,
+        accessibility: validation.data.accessibility ?? null,
+        fishDensity: validation.data.fishDensity ?? null,
+        cleanliness: validation.data.cleanliness ?? null,
+        tranquility: validation.data.tranquility ?? null,
+        dataAccuracy: validation.data.dataAccuracy ?? null,
         userId: session.user.id,
         spotId: id,
       },
