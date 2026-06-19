@@ -195,9 +195,9 @@ export function SpotDetail({ spot, reliability }: SpotDetailProps) {
 
         <div className="space-y-4">
           <SpotAlerts spotId={spot.id} />
+          <SpotFishIndex spotId={spot.id} spotSlug={spot.slug} />
           <SpotWeather spotId={spot.id} />
           <SpotWaterLevel spotId={spot.id} />
-          <SpotFishIndex spotId={spot.id} />
           <SpotSolunar spotId={spot.id} />
 
           <div className="rounded-fs-lg border border-line p-4">

@@ -140,6 +140,12 @@
 - **Fix proposé** : ajouter `"engines": { "node": ">=20" }` dans `package.json` + `.nvmrc` à `20`.
 - **Détecté** : 2026-04-26 (onboarding)
 
+### Cartes « conditions » de la sidebar fiche pas encore migrées aux tokens FS
+- **Fichiers** : `src/components/spots/SpotWeather.tsx`, `SpotWaterLevel.tsx`, `SpotSolunar.tsx`
+- **Constat** : ces 3 cartes voisines de la nouvelle « Conditions du jour » utilisent encore des couleurs Tailwind brutes (`text-blue-500`, `bg-amber-100 dark:bg-amber-900/30`, `text-green-600`…) au lieu des tokens design (`--fs-*` : `text-score-hi`, `text-amber-deep`, `border-line`…). Incohérence visuelle légère avec `SpotScorePanel` / `SpotFishIndex` (migrés). Hors scope de la sous-tranche 10 (Boy Scout limité au fichier touché).
+- **Fix proposé** : migration locale des classes couleur vers les tokens FS lors d'un prochain passage sur ces cartes.
+- **Détecté** : 2026-06-19 (sous-tranche 10)
+
 ## Resolved (archive 30 jours avant suppression)
 
 ### Enregistrer / Itinéraire — câblage liste + fiche (sous-tranche 7) — RÉSOLU 2026-06-18
