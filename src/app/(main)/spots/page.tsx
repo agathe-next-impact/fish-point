@@ -13,6 +13,7 @@ import { ExplorerViewToggle } from '@/components/explore/ExplorerViewToggle';
 import { SearchThisAreaButton } from '@/components/explore/SearchThisAreaButton';
 import { SpotsEmptyState } from '@/components/explore/SpotsEmptyState';
 import { EMPTY_FILTERS, type GridFilters } from '@/components/spots/SpotGridFilters';
+import { buildTripContextQuery } from '@/lib/trip-match';
 import { useInfiniteSpots, useSpots } from '@/hooks/useSpots';
 import { useMapSpots } from '@/hooks/useMapSpots';
 import { usePrivateSpotsBbox } from '@/hooks/usePrivateSpots';
@@ -125,6 +126,26 @@ export default function ExplorerPage() {
     premiumOnly: gridFilters.premiumOnly,
     showAutoDiscovered: gridFilters.showAutoDiscovered,
   }), [debouncedSearch, gridFilters]);
+
+  // Contexte « sortie » propagé aux liens spot (liste + marqueur) : le verdict
+  // « Adapté à votre sortie » ne se déclenche que sur une espèce ciblée, donc on ne
+  // propage QUE quand une espèce est active. Source de vérité unique avec la fiche
+  // via `buildTripContextQuery` ↔ `readTripContext`. Position = géoloc RÉELLE des
+  // filtres uniquement (`lat`/`lng` accordés via « Autour de moi ») ; jamais le
+  // centre de la zone Explorer. Chaîne vide sans espèce ⇒ liens inchangés (honnêteté).
+  const tripQuery = useMemo(() => {
+    const species = gridFilters.species.map((s) => s.id);
+    if (species.length === 0) return '';
+    const origin =
+      gridFilters.lat !== undefined && gridFilters.lng !== undefined
+        ? { latitude: gridFilters.lat, longitude: gridFilters.lng }
+        : null;
+    return buildTripContextQuery({
+      species,
+      mode: gridFilters.fishingMode[0] ?? null,
+      origin,
+    });
+  }, [gridFilters]);
 
   const {
     data,
@@ -264,6 +285,7 @@ export default function ExplorerPage() {
                 onBoundsChange={handleBoundsChange}
                 isLoading={needsBboxSpots ? isBboxFetching : false}
                 spotFilters={mapFilters}
+                tripQuery={tripQuery}
               />
               <SearchThisAreaButton
                 visible={canSearchArea}
@@ -285,7 +307,7 @@ export default function ExplorerPage() {
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
                 {allSpots.map((spot, i) => (
                   <div key={spot.id} className="anim-rise" style={{ animationDelay: `${Math.min(i, 9) * 0.05}s` }}>
-                    <SpotCard spot={spot} />
+                    <SpotCard spot={spot} tripQuery={tripQuery} />
                   </div>
                 ))}
               </div>

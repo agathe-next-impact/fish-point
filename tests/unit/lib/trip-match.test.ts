@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  buildTripContextQuery,
   computeTripMatch,
   deriveRegulationStatus,
   readTripContext,
@@ -248,5 +249,57 @@ describe('readTripContext', () => {
   it('ignore une position incomplète ou hors plage (origin null, verdict possible)', () => {
     expect(readTripContext(paramsFrom('species=pike&lat=45'))!.origin).toBeNull();
     expect(readTripContext(paramsFrom('species=pike&lat=999&lng=5'))!.origin).toBeNull();
+  });
+});
+
+describe('buildTripContextQuery ↔ readTripContext (round-trip, vocabulaire unique)', () => {
+  function readQuery(query: string) {
+    const sp = new URLSearchParams(query);
+    return readTripContext({ getAll: (k: string) => sp.getAll(k), get: (k: string) => sp.get(k) });
+  }
+
+  it('renvoie une chaîne vide sans espèce (lien inchangé ⇒ score global)', () => {
+    expect(buildTripContextQuery({ species: [] })).toBe('');
+    expect(buildTripContextQuery({ species: [], mode: 'bord', origin: { latitude: 45, longitude: 5 } })).toBe('');
+    // Même les champs vides à filtrer ne créent pas de contexte.
+    expect(buildTripContextQuery({ species: ['', ''] })).toBe('');
+  });
+
+  it('relit À L’IDENTIQUE une sortie complète (espèce + mode + position)', () => {
+    const query = buildTripContextQuery({
+      species: ['pike'],
+      mode: 'bord',
+      origin: { latitude: 45.5, longitude: 5.2 },
+    });
+    const ctx = readQuery(query);
+    expect(ctx).not.toBeNull();
+    expect(ctx!.species).toEqual(['pike']);
+    expect(ctx!.mode).toBe('bord');
+    expect(ctx!.origin).toEqual({ latitude: 45.5, longitude: 5.2 });
+  });
+
+  it('préserve plusieurs espèces (clé `species` répétée)', () => {
+    const ctx = readQuery(buildTripContextQuery({ species: ['pike', 'zander'] }));
+    expect(ctx!.species).toEqual(['pike', 'zander']);
+  });
+
+  it('omet la position quand origin est absent (distance non évaluée, jamais inventée)', () => {
+    const ctx = readQuery(buildTripContextQuery({ species: ['pike'], mode: 'bateau' }));
+    expect(ctx!.origin).toBeNull();
+    expect(ctx!.mode).toBe('bateau');
+  });
+
+  it('omet la position invalide plutôt que d’écrire de fausses coordonnées', () => {
+    const query = buildTripContextQuery({
+      species: ['pike'],
+      origin: { latitude: 999, longitude: 5 },
+    });
+    expect(query).not.toContain('lat=');
+    expect(readQuery(query)!.origin).toBeNull();
+  });
+
+  it('omet le mode quand il est null ⇒ contexte sans mode relu sans mode', () => {
+    const ctx = readQuery(buildTripContextQuery({ species: ['pike'], mode: null }));
+    expect(ctx!.mode).toBeNull();
   });
 });

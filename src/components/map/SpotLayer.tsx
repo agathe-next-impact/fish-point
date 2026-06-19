@@ -33,6 +33,12 @@ interface SpotLayerProps {
   tileUrl: string;
   selectedSpot: SelectedTileSpot | null;
   onClosePopup: () => void;
+  /**
+   * Suffixe de query « contexte sortie » (`species=…&mode=…&lat=…&lng=…`) appendé au
+   * lien « Voir la fiche » pour y déclencher le verdict « Adapté à votre sortie ».
+   * Chaîne vide ⇒ lien inchangé (fiche en score global). Source : `buildTripContextQuery`.
+   */
+  tripQuery?: string;
 }
 
 const unclusteredLayer: LayerProps = {
@@ -79,7 +85,7 @@ async function fetchSpotPreview(id: string): Promise<SpotListItem> {
   return json.data;
 }
 
-export const SpotLayer = memo(function SpotLayer({ tileUrl, selectedSpot, onClosePopup }: SpotLayerProps) {
+export const SpotLayer = memo(function SpotLayer({ tileUrl, selectedSpot, onClosePopup, tripQuery = '' }: SpotLayerProps) {
   const { data: preview } = useQuery({
     queryKey: ['spotMapPreview', selectedSpot?.id],
     queryFn: () => fetchSpotPreview(selectedSpot!.id),
@@ -93,6 +99,12 @@ export const SpotLayer = memo(function SpotLayer({ tileUrl, selectedSpot, onClos
   const popupCommune = preview?.commune ?? null;
   const popupName = popupSpot
     ? formatSpotName({ name: popupSpot.name, commune: popupCommune, waterType: popupSpot.waterType })
+    : '';
+  // Lien fiche + contexte sortie (même suffixe que la liste). Vide ⇒ lien inchangé.
+  const spotHref = popupSpot
+    ? tripQuery
+      ? `/spots/${popupSpot.slug}?${tripQuery}`
+      : `/spots/${popupSpot.slug}`
     : '';
 
   return (
@@ -165,7 +177,7 @@ export const SpotLayer = memo(function SpotLayer({ tileUrl, selectedSpot, onClos
                 <Navigation className="h-3.5 w-3.5" aria-hidden /> Itinéraire
               </a>
             </div>
-            <Link href={`/spots/${popupSpot.slug}`}>
+            <Link href={spotHref}>
               <Button size="sm" className="mt-2 w-full text-xs">
                 Voir la fiche
               </Button>

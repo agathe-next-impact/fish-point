@@ -173,6 +173,65 @@ export function readTripContext(params: {
   return { species, mode: mode && mode !== '' ? mode : null, origin };
 }
 
+/**
+ * Entrée de sérialisation du contexte sortie vers une query string. Volontairement
+ * découplée de `TripContext` (interne) : l'appelant Explorer dérive directement ses
+ * filtres (`species` ids, `mode`, position) sans reconstruire un `TripContext`.
+ */
+export interface TripContextQueryInput {
+  /** Espèce(s) ciblée(s) (`speciesId`). Vide ⇒ pas de contexte ⇒ query vide. */
+  species: readonly string[];
+  /** Mode de pêche éventuel (informatif). `null`/absent ⇒ param omis. */
+  mode?: string | null;
+  /** Position utilisateur RÉELLE (géoloc). `null`/absent ⇒ `lat`/`lng` omis. */
+  origin?: { latitude: number; longitude: number } | null;
+}
+
+/**
+ * Sérialise un contexte sortie en query string EXACTEMENT relisible par
+ * `readTripContext` (mêmes clés : `species` répété, `mode`, `lat`, `lng`).
+ *
+ * SOURCE DE VÉRITÉ UNIQUE lecture↔écriture : tout changement de vocabulaire doit
+ * rester aligné avec `readTripContext` (testé par round-trip). Honnêteté encodée :
+ *   - Aucune espèce ⇒ chaîne VIDE (le lien reste inchangé, score global affiché).
+ *   - Position absente/invalide ⇒ `lat`/`lng` OMIS (jamais une fausse position :
+ *     on n'invente pas le centre de la zone Explorer). La distance ne sera alors
+ *     pas évaluée (null-safe côté `computeTripMatch`).
+ *
+ * Renvoie une query string SANS le `?` initial (chaîne vide si pas d'espèce), prête
+ * à être appendée au `href` par l'appelant.
+ */
+export function buildTripContextQuery(input: TripContextQueryInput): string {
+  const species = input.species.filter(Boolean);
+  if (species.length === 0) return '';
+
+  const params = new URLSearchParams();
+  for (const id of species) params.append('species', id);
+
+  if (input.mode && input.mode !== '') params.set('mode', input.mode);
+
+  const lat = input.origin?.latitude;
+  const lng = input.origin?.longitude;
+  // On n'émet la position QUE si les deux coordonnées sont finies et dans la même
+  // plage que celle acceptée par `readTripContext` (sinon elle serait ignorée à la
+  // relecture : autant ne pas l'écrire, pour rester honnête et minimal).
+  if (
+    typeof lat === 'number' &&
+    typeof lng === 'number' &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180
+  ) {
+    params.set('lat', String(lat));
+    params.set('lng', String(lng));
+  }
+
+  return params.toString();
+}
+
 /** Plafonds nominaux du barème cible (somme = 100). */
 const MAX = {
   species: 30,

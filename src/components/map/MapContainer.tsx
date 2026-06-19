@@ -57,6 +57,13 @@ interface MapContainerProps {
    * Optionnel par robustesse : absent ⇒ aucun filtre (la carte affiche tout).
    */
   spotFilters?: SpotQueryFilters;
+  /**
+   * Suffixe de query « contexte sortie » (`species=…&mode=…&lat=…&lng=…`) propagé au
+   * lien « Voir la fiche » du popup marqueur, pour y déclencher le verdict « Adapté à
+   * votre sortie ». Chaîne vide ⇒ lien inchangé. Même source que la liste
+   * (`buildTripContextQuery`, dérivé des filtres actifs côté Explorer).
+   */
+  tripQuery?: string;
 }
 
 const EMPTY_SPOT_FILTERS: SpotQueryFilters = {};
@@ -68,6 +75,7 @@ export function MapContainer({
   isLoading = false,
   className,
   spotFilters,
+  tripQuery = '',
 }: MapContainerProps) {
   const mapRef = useRef<MapRef>(null);
   const viewport = useMapStore((s) => s.viewport);
@@ -183,6 +191,7 @@ export function MapContainer({
             tileUrl={spotTileUrl}
             selectedSpot={selectedSpot}
             onClosePopup={() => setSelectedSpot(null)}
+            tripQuery={tripQuery}
           />
         )}
 

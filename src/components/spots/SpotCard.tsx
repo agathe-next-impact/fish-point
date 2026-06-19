@@ -15,10 +15,17 @@ import type { SpotListItem } from '@/types/spot';
 
 interface SpotCardProps {
   spot: SpotListItem;
+  /**
+   * Suffixe de query « contexte sortie » (`species=…&mode=…&lat=…&lng=…`) propagé
+   * au lien de la fiche pour y déclencher le verdict « Adapté à votre sortie ».
+   * Chaîne vide ⇒ lien inchangé (fiche en score global). Source : `buildTripContextQuery`.
+   */
+  tripQuery?: string;
 }
 
-export const SpotCard = memo(function SpotCard({ spot }: SpotCardProps) {
+export const SpotCard = memo(function SpotCard({ spot, tripQuery = '' }: SpotCardProps) {
   const displayName = formatSpotName({ name: spot.name, commune: spot.commune, waterType: spot.waterType });
+  const spotHref = tripQuery ? `/spots/${spot.slug}?${tripQuery}` : `/spots/${spot.slug}`;
   const imageUrl = spot.primaryImage || getOrthoPhotoUrl(spot.latitude, spot.longitude, 600, 400);
   const secondaryChip =
     (spot.waterCategory && WATER_CATEGORY_LABELS[spot.waterCategory]) ||
@@ -34,7 +41,7 @@ export const SpotCard = memo(function SpotCard({ spot }: SpotCardProps) {
         Enregistrer/Itinéraire ne navigue pas (les actions sont en relative z-10 au-dessus).
       */}
       <Link
-        href={`/spots/${spot.slug}`}
+        href={spotHref}
         aria-label={`Voir la fiche : ${displayName}`}
         className="block rounded-fs-lg after:absolute after:inset-0 after:z-0 after:content-[''] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
