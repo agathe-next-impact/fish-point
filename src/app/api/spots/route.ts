@@ -15,9 +15,9 @@ import {
   FISHING_MODE_TYPES,
   FISHING_TECHNIQUE_TYPES,
 } from '@/lib/fishing-type-classification';
-
-const MODE_SET = new Set<string>(FISHING_MODE_TYPES);
-const TECHNIQUE_SET = new Set<string>(FISHING_TECHNIQUE_TYPES);
+import type { Prisma } from '@prisma/client';
+import type { SpotQueryFilters } from '@/lib/spot-filter-params';
+import { buildSpotWhere } from '@/lib/spot-where';
 
 const AccessTypeEnum = z.enum([
   'FREE',
@@ -114,22 +114,35 @@ export async function GET(request: NextRequest) {
     const limit = q.limit;
     const skip = (page - 1) * limit;
 
-    const where: Record<string, unknown> = { status: 'APPROVED' };
-    // Conditions AND combinables (relation species, accessibilité, rayon…).
-    const and: unknown[] = [];
+    // Filtres « sortie » canoniques (sous-ensemble partagé liste/carte) → WHERE Prisma.
+    // Source UNIQUE de la traduction filtres → where (cf. `@/lib/spot-where`). Les arrays
+    // vides du schéma (defaults `[]`) deviennent `undefined` pour coller au type canonique ;
+    // `buildSpotWhere` les ignore de toute façon (gardes `length > 0`).
+    const filters: SpotQueryFilters = {
+      department: q.department,
+      waterType: q.waterType.length > 0 ? q.waterType : undefined,
+      waterCategory: q.waterCategory,
+      fishCategory: q.fishCategory.length > 0 ? q.fishCategory : undefined,
+      accessType: q.accessType,
+      search: q.search,
+      minRating: q.minRating,
+      minFishabilityScore: q.minFishabilityScore,
+      maxFishabilityScore: q.maxFishabilityScore,
+      species: q.species.length > 0 ? q.species : undefined,
+      fishingMode: q.fishingMode.length > 0 ? q.fishingMode : undefined,
+      fishingTechnique: q.fishingTechnique.length > 0 ? q.fishingTechnique : undefined,
+      parking: q.parking,
+      boatLaunch: q.boatLaunch,
+      pmr: q.pmr,
+      nightFishing: q.nightFishing,
+    };
 
-    if (q.department) {
-      where.department = q.department;
-    }
-    if (q.waterType.length > 0) {
-      where.waterType = { in: q.waterType };
-    }
-    if (q.search) {
-      where.OR = [
-        { name: { contains: q.search, mode: 'insensitive' } },
-        { commune: { contains: q.search, mode: 'insensitive' } },
-      ];
-    }
+    // base `status` + filtres canoniques ; les bornes géo (hors type canonique)
+    // sont fusionnées ci-dessous, propres à la liste.
+    const where: Prisma.SpotWhereInput = {
+      status: 'APPROVED',
+      ...buildSpotWhere(filters),
+    };
 
     // Bornes géographiques optionnelles (zone Explorer committée) : bornent la
     // liste à la même fenêtre que la carte. Rétro-compatible : sans ces params,
@@ -159,69 +172,6 @@ export async function GET(request: NextRequest) {
       const lngDelta = q.radius / (111_000 * (Math.abs(cos) < 1e-6 ? 1e-6 : cos));
       where.latitude = { gte: q.lat - latDelta, lte: q.lat + latDelta };
       where.longitude = { gte: q.lng - Math.abs(lngDelta), lte: q.lng + Math.abs(lngDelta) };
-    }
-
-    if (q.accessType) {
-      if (q.accessType === 'FREE') {
-        // "Libre" inclut les spots sans accessType (valeur par défaut)
-        and.push({ OR: [{ accessType: 'FREE' }, { accessType: null }] });
-      } else {
-        where.accessType = q.accessType;
-      }
-    }
-    if (q.waterCategory) {
-      where.waterCategory = q.waterCategory;
-    }
-    if (q.fishCategory.length > 0) {
-      where.species = {
-        some: { species: { category: { in: q.fishCategory } } },
-      };
-    }
-
-    // ── Filtres « sortie » ──────────────────────────────────────────────
-    // Espèce précise : relation SpotSpecies → FishSpecies (par id). Combiné en AND
-    // pour ne pas écraser un éventuel filtre fishCategory (les deux ciblent species).
-    if (q.species.length > 0) {
-      and.push({ species: { some: { speciesId: { in: q.species } } } });
-    }
-
-    // Mode + technique filtrent la MÊME colonne `fishingTypes` (array enum). On les
-    // sépare en UI mais on réunit ici : un spot doit contenir AU MOINS un des modes
-    // ET au moins une des techniques demandés (intersection des deux intentions).
-    const modes = q.fishingMode.filter((t) => MODE_SET.has(t));
-    const techniques = q.fishingTechnique.filter((t) => TECHNIQUE_SET.has(t));
-    if (modes.length > 0) {
-      and.push({ fishingTypes: { hasSome: modes } });
-    }
-    if (techniques.length > 0) {
-      and.push({ fishingTypes: { hasSome: techniques } });
-    }
-
-    // Accès physique : booléens stockés dans le JSON `accessibility`.
-    const accessibilityFlags: Array<'parking' | 'boatLaunch' | 'pmr' | 'nightFishing'> = [];
-    if (q.parking) accessibilityFlags.push('parking');
-    if (q.boatLaunch) accessibilityFlags.push('boatLaunch');
-    if (q.pmr) accessibilityFlags.push('pmr');
-    if (q.nightFishing) accessibilityFlags.push('nightFishing');
-    for (const flag of accessibilityFlags) {
-      and.push({ accessibility: { path: [flag], equals: true } });
-    }
-
-    if (q.minRating !== undefined && q.minRating > 0) {
-      where.averageRating = { gte: q.minRating };
-    }
-
-    const minScore = q.minFishabilityScore ?? 0;
-    const maxScore = q.maxFishabilityScore ?? 0;
-    if (minScore > 0 || maxScore > 0) {
-      const scoreFilter: Record<string, number> = {};
-      if (minScore > 0) scoreFilter.gte = minScore;
-      if (maxScore > 0) scoreFilter.lte = maxScore;
-      where.fishabilityScore = scoreFilter;
-    }
-
-    if (and.length > 0) {
-      where.AND = and;
     }
 
     const [spots, total] = await Promise.all([
