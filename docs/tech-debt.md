@@ -55,6 +55,20 @@
 
 ## Medium
 
+### Déduplication des spots auto-découverts (data, hors no-migration)
+- **Fichiers** : table `spots` (DB) ; côté affichage `src/lib/spot-name.ts`
+- **Constat** : des spots auto-découverts (imports OFB/externes) sont dupliqués géographiquement — même plan d'eau importé plusieurs fois avec des `externalId` distincts et des noms quasi identiques (« Jetée (01-25797529) » vs « Jetée (01-25797530) » à quelques mètres). La sous-tranche 8 nettoie l'AFFICHAGE du nom (`formatSpotName`) mais **ne déduplique pas** : un vrai dédup demande un travail data/DB (clustering géo + clé de fusion + migration), hors périmètre no-migration de la tranche.
+- **Impact** : la liste et la carte montrent plusieurs marqueurs pour un même point d'accès réel → impression de base bruitée, et après formatage du nom, des libellés identiques (« Jetée — Annecy » ×3) deviennent visuellement indiscernables (le suffixe technique qui les distinguait est masqué).
+- **Fix proposé** : (1) job de clustering géospatial (PostGIS `ST_DWithin`) pour grouper les candidats < ~30 m + similarité de nom ; (2) clé de fusion / table de mapping `canonical_spot_id` ; (3) UI de revue pour les fusions ambiguës. Préférer additif (champ `mergedIntoId` nullable) à un drop destructif.
+- **Détecté** : 2026-06-19 (sous-tranche 8, volet A)
+
+### Sections de fiche qui disparaissent silencieusement quand vides (`return null`)
+- **Fichiers** : `src/components/spots/{SpotWaterQuality,SpotObservations,SpotBiodiversity,SpotProtectedZones,SpotSpawnCalendar}.tsx`
+- **Constat** : la sous-tranche 8 (volet B) a traité le cas **critique** — `SpotRegulations` n'affiche plus « Aucune restriction spécifique connue » (lu comme une autorisation) mais un état « Donnée indisponible » + CTA. En revanche, les 5 composants ci-dessus rendent `return null` quand leur fetch revient vide : la section disparaît purement (pas de cadre vide trompeur, mais aucun feedback « donnée absente » + CTA non plus). Reporté faute de budget fichiers (≤ 6) sur la tranche, et parce que ces composants sont *fetch-based* — le message « indisponible » ne doit s'afficher qu'à l'état `success && empty`, pas pendant `isLoading` ni en cas d'erreur réseau (sinon on masque un chargement / une panne par un faux « pas de donnée »).
+- **Impact** : trous verticaux silencieux sur la fiche ; l'utilisateur ne sait pas distinguer « pas encore chargé » de « réellement aucune donnée ». Pas de point d'entrée pour contribuer.
+- **Fix proposé** : extraire un `<DataUnavailable label CTA />` réutilisable (titre + icône neutre + message « Donnée indisponible — aucune observation récente vérifiée » + CTA `Ajouter une observation`), et l'afficher dans chaque composant **uniquement** sur `!isLoading && !isError && empty`. `SpotsEmptyState` (`src/components/explore/`) est un bon modèle de ton mais cible l'état « 0 résultat » de l'Explorer, pas réutilisable tel quel.
+- **Détecté** : 2026-06-19 (sous-tranche 8, volet B — reporté)
+
 ### Espace « Enregistrés » invité — pas de fusion local → compte au login
 - **Fichiers** : `src/lib/offline-db.ts` (store `savedSpots`), futur hook de sync
 - **Constat** : les saves invité atterrissent dans IndexedDB (`savedSpots`). Au login, ils ne sont pas remontés vers le serveur (modèle `Favorite`). La sync compte est explicitement hors périmètre de la sous-tranche 6.

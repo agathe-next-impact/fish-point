@@ -9,6 +9,7 @@ import { WATER_TYPE_LABELS, WATER_CATEGORY_LABELS, FISHING_TYPE_LABELS } from '@
 import { getDepartmentName } from '@/config/departments';
 import { formatDistance } from '@/lib/map';
 import { buildDirectionsUrl } from '@/lib/directions';
+import { formatSpotName } from '@/lib/spot-name';
 import { getOrthoPhotoUrl } from '@/services/ign-ortho.service';
 import type { SpotListItem } from '@/types/spot';
 
@@ -17,6 +18,7 @@ interface SpotCardProps {
 }
 
 export const SpotCard = memo(function SpotCard({ spot }: SpotCardProps) {
+  const displayName = formatSpotName({ name: spot.name, commune: spot.commune, waterType: spot.waterType });
   const imageUrl = spot.primaryImage || getOrthoPhotoUrl(spot.latitude, spot.longitude, 600, 400);
   const secondaryChip =
     (spot.waterCategory && WATER_CATEGORY_LABELS[spot.waterCategory]) ||
@@ -33,13 +35,13 @@ export const SpotCard = memo(function SpotCard({ spot }: SpotCardProps) {
       */}
       <Link
         href={`/spots/${spot.slug}`}
-        aria-label={`Voir la fiche : ${spot.name}`}
+        aria-label={`Voir la fiche : ${displayName}`}
         className="block rounded-fs-lg after:absolute after:inset-0 after:z-0 after:content-[''] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         <div className="relative h-[140px] bg-muted">
           <Image
             src={imageUrl}
-            alt={spot.name}
+            alt={displayName}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -61,7 +63,7 @@ export const SpotCard = memo(function SpotCard({ spot }: SpotCardProps) {
         </div>
 
         <div className="p-4">
-          <h3 className="fs-dsp truncate text-[17px] font-bold text-ink">{spot.name}</h3>
+          <h3 className="fs-dsp truncate text-[17px] font-bold text-ink">{displayName}</h3>
           <div className="mt-1 flex items-center gap-1.5 text-sm text-fs-muted">
             <MapPin className="h-3.5 w-3.5 shrink-0" strokeWidth={1.9} />
             <span className="truncate">
@@ -117,7 +119,7 @@ export const SpotCard = memo(function SpotCard({ spot }: SpotCardProps) {
           href={buildDirectionsUrl(spot.latitude, spot.longitude)}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label={`Itinéraire vers ${spot.name}`}
+          aria-label={`Itinéraire vers ${displayName}`}
           className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-semibold transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           <Navigation className="h-4 w-4" strokeWidth={1.9} aria-hidden /> Itinéraire

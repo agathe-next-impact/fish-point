@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { AccessTag } from '@/components/ui/access-tag';
 import { SaveSpotButton } from './SaveSpotButton';
 import { buildDirectionsUrl } from '@/lib/directions';
+import { formatSpotName } from '@/lib/spot-name';
 import { SpotScorePanel } from './SpotScorePanel';
 import { WATER_TYPE_LABELS, FISHING_TYPE_LABELS } from '@/lib/constants';
 import { getDepartmentName } from '@/config/departments';
@@ -41,6 +42,8 @@ interface SpotDetailProps {
 }
 
 export function SpotDetail({ spot, reliability }: SpotDetailProps) {
+  const displayName = formatSpotName({ name: spot.name, commune: spot.commune, waterType: spot.waterType });
+
   return (
     <div className="max-w-4xl mx-auto">
       {/* Drought restriction banner (go/no-go) */}
@@ -55,7 +58,7 @@ export function SpotDetail({ spot, reliability }: SpotDetailProps) {
       <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="fs-dsp text-2xl font-extrabold text-ink sm:text-3xl">{spot.name}</h1>
+            <h1 className="fs-dsp text-2xl font-extrabold text-ink sm:text-3xl">{displayName}</h1>
             {spot.isVerified && <Check className="h-5 w-5 text-fs-accent" aria-label="Spot vérifié" />}
           </div>
           <div className="mt-1 flex items-center gap-2 text-fs-muted">
@@ -187,7 +190,7 @@ export function SpotDetail({ spot, reliability }: SpotDetailProps) {
 
           <SpotProtectedZones spotId={spot.id} />
 
-          <SpotRegulations regulations={spot.regulations} />
+          <SpotRegulations regulations={spot.regulations} spotSlug={spot.slug} />
         </div>
 
         <div className="space-y-4">
@@ -206,7 +209,7 @@ export function SpotDetail({ spot, reliability }: SpotDetailProps) {
               href={buildDirectionsUrl(spot.latitude, spot.longitude)}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={`Itinéraire vers ${spot.name}`}
+              aria-label={`Itinéraire vers ${displayName}`}
               className="fs-btn fs-btn-primary mt-3 w-full"
             >
               <Navigation className="h-4 w-4" aria-hidden /> Itinéraire

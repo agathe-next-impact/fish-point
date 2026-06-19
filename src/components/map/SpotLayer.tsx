@@ -11,6 +11,7 @@ import { SaveSpotButton } from '@/components/spots/SaveSpotButton';
 import { WATER_TYPE_LABELS } from '@/lib/constants';
 import { formatDistance } from '@/lib/map';
 import { buildDirectionsUrl } from '@/lib/directions';
+import { formatSpotName } from '@/lib/spot-name';
 import type { SpotListItem } from '@/types/spot';
 
 export const SPOTS_SOURCE_ID = 'public-spots';
@@ -87,6 +88,12 @@ export const SpotLayer = memo(function SpotLayer({ tileUrl, selectedSpot, onClos
   });
 
   const popupSpot = preview ?? selectedSpot;
+  // `commune` n'existe que sur le preview enrichi (SpotListItem) ; la sélection
+  // depuis la tuile (SelectedTileSpot) ne la porte pas → on la lit depuis le preview.
+  const popupCommune = preview?.commune ?? null;
+  const popupName = popupSpot
+    ? formatSpotName({ name: popupSpot.name, commune: popupCommune, waterType: popupSpot.waterType })
+    : '';
 
   return (
     <>
@@ -114,7 +121,7 @@ export const SpotLayer = memo(function SpotLayer({ tileUrl, selectedSpot, onClos
         >
           <div className="min-w-[210px] p-3">
             <div className="flex items-start justify-between gap-2">
-              <h3 className="fs-dsp text-[15px] font-bold leading-tight text-ink">{popupSpot.name}</h3>
+              <h3 className="fs-dsp text-[15px] font-bold leading-tight text-ink">{popupName}</h3>
               {popupSpot.fishabilityScore != null && (
                 <ScoreBadge score={popupSpot.fishabilityScore} size="sm" />
               )}
@@ -152,7 +159,7 @@ export const SpotLayer = memo(function SpotLayer({ tileUrl, selectedSpot, onClos
                 href={buildDirectionsUrl(popupSpot.latitude, popupSpot.longitude)}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label={`Itinéraire vers ${popupSpot.name}`}
+                aria-label={`Itinéraire vers ${popupName}`}
                 className="inline-flex h-9 flex-1 items-center justify-center gap-1 rounded-md border border-input bg-background px-2 text-xs font-semibold transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <Navigation className="h-3.5 w-3.5" aria-hidden /> Itinéraire
