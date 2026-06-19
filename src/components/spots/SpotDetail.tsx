@@ -16,7 +16,8 @@ import { SpotWaterLevel } from './SpotWaterLevel';
 import { SpotFishIndex } from './SpotFishIndex';
 import { SpotShareButton } from './SpotShareButton';
 import { SpotAlerts } from './SpotAlerts';
-import { SpotSpeciesCard } from './SpotSpeciesCard';
+import { SpotTopSpecies } from './SpotTopSpecies';
+import { SpotRecentCatches } from './SpotRecentCatches';
 import { SpotWaterQuality } from './SpotWaterQuality';
 import { SpotSpawnCalendar } from './SpotSpawnCalendar';
 import { SpotObservations } from './SpotObservations';
@@ -169,22 +170,15 @@ export function SpotDetail({ spot, reliability }: SpotDetailProps) {
             </section>
           )}
 
-          {spot.species.length > 0 && (
-            <section>
-              <h2 className="fs-dsp text-lg font-bold text-ink mb-3">Espèces présentes</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {spot.species.map((s) => (
-                  <SpotSpeciesCard key={s.id} species={s} />
-                ))}
-              </div>
-            </section>
-          )}
+          <SpotTopSpecies species={spot.species} />
 
           <SpotSpawnCalendar species={spot.species} />
 
           <SpotWaterQuality spotId={spot.id} spotSlug={spot.slug} />
 
           <SpotObservations spotId={spot.id} spotSlug={spot.slug} />
+
+          <SpotRecentCatches spotId={spot.id} />
 
           <SpotBiodiversity spotId={spot.id} spotSlug={spot.slug} />
 
