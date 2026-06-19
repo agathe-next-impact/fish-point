@@ -2,13 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Compass, BookOpen, Plus, BarChart3, User } from 'lucide-react';
+import { Compass, Bookmark, BookOpen, Plus, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Nav cible (spot-experience-architect) : Explorer · Enregistrés · Ajouter · Prises · Profil.
+// « Ajouter » = le FAB central (nouvelle prise). « Stats » bascule dans le menu
+// utilisateur (Navbar) pour tenir la barre à 5 emplacements.
 const tabs = [
   { href: '/spots', label: 'Explorer', icon: Compass },
+  { href: '/enregistres', label: 'Enregistrés', icon: Bookmark },
   { href: '/catches', label: 'Prises', icon: BookOpen },
-  { href: '/dashboard', label: 'Stats', icon: BarChart3 },
   { href: '/profile', label: 'Profil', icon: User },
 ];
 

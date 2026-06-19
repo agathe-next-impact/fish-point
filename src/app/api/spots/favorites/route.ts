@@ -29,12 +29,26 @@ export async function GET() {
       where: { userId: session.user.id },
       include: {
         spot: {
+          // Champs nécessaires à l'espace « Enregistrés » : coordonnées (tri par
+          // distance + carte à venir), métadonnées d'affichage de la carte de spot.
           select: {
             id: true,
             name: true,
             slug: true,
+            latitude: true,
+            longitude: true,
             department: true,
+            commune: true,
             waterType: true,
+            waterCategory: true,
+            fishingTypes: true,
+            averageRating: true,
+            reviewCount: true,
+            isPremium: true,
+            isVerified: true,
+            fishabilityScore: true,
+            accessType: true,
+            dataOrigin: true,
           },
         },
       },
