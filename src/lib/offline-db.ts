@@ -136,3 +136,13 @@ export async function getSavedSpots(): Promise<SavedSpotRecord[]> {
   const db = await getDB();
   return db.getAll('savedSpots');
 }
+
+/**
+ * Vide tous les spots enregistrés localement.
+ * Appelé après une fusion réussie invité → compte (les saves sont désormais
+ * persistés côté serveur, le local n'a plus de raison d'être).
+ */
+export async function clearSavedSpots(): Promise<void> {
+  const db = await getDB();
+  await db.clear('savedSpots');
+}
