@@ -1,71 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import {
   createSpotSchema,
-  WaterTypeEnum,
-  WaterCategoryEnum,
-  FishCategoryEnum,
+  spotsListQuerySchema,
+  toSpotQueryFilters,
 } from '@/validators/spot.schema';
 import { slugify } from '@/lib/utils';
 import { resolveDepartment } from '@/services/geocoding.service';
 import { spotListSelect, toSpotListItem } from '@/lib/spot-list-select';
-import {
-  FISHING_MODE_TYPES,
-  FISHING_TECHNIQUE_TYPES,
-} from '@/lib/fishing-type-classification';
 import type { Prisma } from '@prisma/client';
-import type { SpotQueryFilters } from '@/lib/spot-filter-params';
 import { buildSpotWhere } from '@/lib/spot-where';
-
-const AccessTypeEnum = z.enum([
-  'FREE',
-  'FISHING_CARD',
-  'AAPPMA_SPECIFIC',
-  'PAID',
-  'MEMBERS_ONLY',
-  'RESTRICTED',
-  'PRIVATE',
-]);
-const FishingModeEnum = z.enum(FISHING_MODE_TYPES);
-const FishingTechniqueEnum = z.enum(FISHING_TECHNIQUE_TYPES);
-
-const numeric = (schema: z.ZodNumber) =>
-  z.preprocess((v) => (v === undefined || v === '' ? undefined : Number(v)), schema);
-const boolFlag = z.preprocess((v) => v === 'true' || v === true, z.boolean()).optional();
-
-/**
- * Validation Zod des query params de la liste Explorer (frontière /api/spots).
- * Tolérante : tout invalide → 400 ; les listes multivaluées arrivent via getAll.
- */
-const spotsListQuerySchema = z.object({
-  page: numeric(z.number().int().min(1)).optional().default(1),
-  limit: numeric(z.number().int().min(1).max(100)).optional().default(20),
-  department: z.string().min(1).optional(),
-  waterType: z.array(WaterTypeEnum).default([]),
-  waterCategory: WaterCategoryEnum.optional(),
-  fishCategory: z.array(FishCategoryEnum).default([]),
-  accessType: AccessTypeEnum.optional(),
-  search: z.string().optional(),
-  minRating: numeric(z.number().min(0).max(5)).optional(),
-  minFishabilityScore: numeric(z.number().min(0).max(100)).optional(),
-  maxFishabilityScore: numeric(z.number().min(0).max(100)).optional(),
-  species: z.array(z.string().min(1)).default([]),
-  fishingMode: z.array(FishingModeEnum).default([]),
-  fishingTechnique: z.array(FishingTechniqueEnum).default([]),
-  parking: boolFlag,
-  boatLaunch: boolFlag,
-  pmr: boolFlag,
-  nightFishing: boolFlag,
-  lat: numeric(z.number().min(-90).max(90)).optional(),
-  lng: numeric(z.number().min(-180).max(180)).optional(),
-  radius: numeric(z.number().min(100).max(200000)).optional(),
-  north: numeric(z.number().min(-90).max(90)).optional(),
-  south: numeric(z.number().min(-90).max(90)).optional(),
-  east: numeric(z.number().min(-180).max(180)).optional(),
-  west: numeric(z.number().min(-180).max(180)).optional(),
-});
 
 export async function GET(request: NextRequest) {
   try {
@@ -115,27 +60,11 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Filtres « sortie » canoniques (sous-ensemble partagé liste/carte) → WHERE Prisma.
-    // Source UNIQUE de la traduction filtres → where (cf. `@/lib/spot-where`). Les arrays
-    // vides du schéma (defaults `[]`) deviennent `undefined` pour coller au type canonique ;
-    // `buildSpotWhere` les ignore de toute façon (gardes `length > 0`).
-    const filters: SpotQueryFilters = {
-      department: q.department,
-      waterType: q.waterType.length > 0 ? q.waterType : undefined,
-      waterCategory: q.waterCategory,
-      fishCategory: q.fishCategory.length > 0 ? q.fishCategory : undefined,
-      accessType: q.accessType,
-      search: q.search,
-      minRating: q.minRating,
-      minFishabilityScore: q.minFishabilityScore,
-      maxFishabilityScore: q.maxFishabilityScore,
-      species: q.species.length > 0 ? q.species : undefined,
-      fishingMode: q.fishingMode.length > 0 ? q.fishingMode : undefined,
-      fishingTechnique: q.fishingTechnique.length > 0 ? q.fishingTechnique : undefined,
-      parking: q.parking,
-      boatLaunch: q.boatLaunch,
-      pmr: q.pmr,
-      nightFishing: q.nightFishing,
-    };
+    // Le mapping query → `SpotQueryFilters` est centralisé dans `spot.schema.ts`
+    // (`toSpotQueryFilters`) ; la traduction filtres → where est la source UNIQUE
+    // `@/lib/spot-where`. Les arrays vides (defaults `[]`) deviennent `undefined`,
+    // ignorés de toute façon par `buildSpotWhere` (gardes `length > 0`).
+    const filters = toSpotQueryFilters(q);
 
     // base `status` + filtres canoniques ; les bornes géo (hors type canonique)
     // sont fusionnées ci-dessous, propres à la liste.
