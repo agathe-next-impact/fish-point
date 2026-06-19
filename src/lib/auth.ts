@@ -5,6 +5,27 @@ import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { prisma } from './prisma';
 
+function ignoreProductionAuthUrlInDevelopment() {
+  if (process.env.NODE_ENV === 'production') return;
+
+  const configuredUrl = process.env.AUTH_URL || process.env.NEXTAUTH_URL;
+  if (!configuredUrl) return;
+
+  try {
+    const { hostname } = new URL(configuredUrl);
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+      return;
+    }
+  } catch {
+    // Invalid local auth URL: let Auth.js derive it from the request.
+  }
+
+  delete process.env.AUTH_URL;
+  delete process.env.NEXTAUTH_URL;
+}
+
+ignoreProductionAuthUrlInDevelopment();
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
   adapter: PrismaAdapter(prisma),
