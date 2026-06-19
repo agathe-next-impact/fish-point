@@ -19,6 +19,7 @@ import { usePrivateSpotsBbox } from '@/hooks/usePrivateSpots';
 import { useMapStore } from '@/store/map.store';
 import { useDebounce } from '@/hooks/useDebounce';
 import { cn } from '@/lib/utils';
+import type { SpotQueryFilters } from '@/lib/spot-filter-params';
 import type { WaterType, WaterCategory } from '@/types/spot';
 
 const MapContainer = dynamic(
@@ -88,6 +89,32 @@ export default function ExplorerPage() {
     west: committedBounds?.west,
     limit: 60,
   }), [debouncedSearch, gridFilters, committedBounds]);
+
+  // Sous-ensemble « sortie » envoyé AUX TUILES MVT de la carte : exactement les mêmes
+  // filtres que la liste (source d'état unifiée `gridFilters`). On exclut les bornes géo
+  // et la pagination — la tuile borne déjà géographiquement (z/x/y). C'est ce qui aligne
+  // les marqueurs de la carte sur la liste (fin de la divergence carte ↔ liste).
+  const mapFilters = useMemo<SpotQueryFilters>(() => ({
+    search: debouncedSearch || undefined,
+    department: gridFilters.department,
+    waterType: gridFilters.waterType.length > 0 ? gridFilters.waterType : undefined,
+    waterCategory: gridFilters.waterCategory,
+    fishCategory: gridFilters.fishCategory.length > 0 ? gridFilters.fishCategory : undefined,
+    accessType: gridFilters.accessType,
+    minFishabilityScore: gridFilters.minFishabilityScore,
+    maxFishabilityScore: gridFilters.maxFishabilityScore,
+    species: gridFilters.species.length > 0
+      ? gridFilters.species.map((s) => s.id)
+      : undefined,
+    fishingMode: gridFilters.fishingMode.length > 0 ? gridFilters.fishingMode : undefined,
+    fishingTechnique: gridFilters.fishingTechnique.length > 0
+      ? gridFilters.fishingTechnique
+      : undefined,
+    parking: gridFilters.parking,
+    boatLaunch: gridFilters.boatLaunch,
+    pmr: gridFilters.pmr,
+    nightFishing: gridFilters.nightFishing,
+  }), [debouncedSearch, gridFilters]);
 
   const {
     data,
@@ -218,6 +245,7 @@ export default function ExplorerPage() {
                 privateSpots={privateSpotsData?.data ?? []}
                 onBoundsChange={handleBoundsChange}
                 isLoading={needsBboxSpots ? isBboxFetching : false}
+                spotFilters={mapFilters}
               />
               <SearchThisAreaButton
                 visible={canSearchArea}

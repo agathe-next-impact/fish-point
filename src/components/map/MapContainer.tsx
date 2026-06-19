@@ -31,6 +31,7 @@ import { HeatmapLayer } from './HeatmapLayer';
 import { FishabilityLayer } from './FishabilityLayer';
 import { RegulationZones } from './RegulationZones';
 import { PrivateSpotMarker } from '@/components/private-spots/PrivateSpotMarker';
+import { serializeSpotFilters, type SpotQueryFilters } from '@/lib/spot-filter-params';
 import type { SpotListItem } from '@/types/spot';
 import type { PrivateSpotSummary } from '@/types/private-spot';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -48,6 +49,13 @@ interface MapContainerProps {
   onBoundsChange?: (bounds: MapBounds) => void;
   isLoading?: boolean;
   className?: string;
+  /**
+   * Filtres « sortie » de l'Explorer (source d'état partagée avec la liste). Quand fournis,
+   * ils sont sérialisés dans l'URL des tuiles MVT pour que les MARQUEURS de la carte
+   * appliquent exactement les mêmes filtres que la liste (convergence carte ↔ liste).
+   * Absents (carte autonome `/map`) : on retombe sur les filtres du store `MapFiltersState`.
+   */
+  spotFilters?: SpotQueryFilters;
 }
 
 export function MapContainer({
@@ -56,6 +64,7 @@ export function MapContainer({
   onBoundsChange,
   isLoading = false,
   className,
+  spotFilters,
 }: MapContainerProps) {
   const mapRef = useRef<MapRef>(null);
   const viewport = useMapStore((s) => s.viewport);
@@ -97,22 +106,36 @@ export function MapContainer({
   );
 
   const spotTileUrl = useMemo(() => {
-    const params = new URLSearchParams();
-    filters.waterTypes.forEach((type) => params.append('waterType', type));
-    filters.fishingTypes.forEach((type) => params.append('fishingType', type));
-    if (filters.minRating > 0) params.set('minRating', filters.minRating.toString());
-    if (filters.minFishabilityScore > 0) {
-      params.set('minFishabilityScore', filters.minFishabilityScore.toString());
+    // Source d'état UNIFIÉE : quand l'Explorer fournit `spotFilters` (les mêmes filtres
+    // que la liste envoie à /api/spots), on les sérialise via le helper PARTAGÉ pour que
+    // les marqueurs MVT honorent espèce/mode/technique/accès — fin de la divergence.
+    // Sinon (carte autonome /map), on retombe sur les filtres du store `MapFiltersState`.
+    let params: URLSearchParams;
+    if (spotFilters) {
+      params = serializeSpotFilters(spotFilters);
+    } else {
+      // Carte autonome `/map` : on conserve EXACTEMENT la sémantique historique du store
+      // (`fishingTypes` plat envoyé via l'alias legacy `fishingType` = match ANY type, pas
+      // l'intersection mode∧technique de la liste). Aucune régression de comportement /map.
+      params = serializeSpotFilters({
+        waterType: filters.waterTypes,
+        minRating: filters.minRating,
+        minFishabilityScore: filters.minFishabilityScore,
+        pmr: filters.pmr,
+        nightFishing: filters.nightFishing,
+      });
+      filters.fishingTypes.forEach((type) => params.append('fishingType', type));
     }
+
+    // Params propres au panneau overlay carte (MapFilters), absents du modèle liste :
+    // ils restent pilotés par le store et s'ajoutent quelle que soit la source ci-dessus.
     if (!filters.showAutoDiscovered) params.set('origin', 'USER');
-    if (filters.pmr) params.set('pmr', 'true');
-    if (filters.nightFishing) params.set('nightFishing', 'true');
     if (filters.premiumOnly) params.set('premiumOnly', 'true');
 
     const suffix = params.size > 0 ? `?${params}` : '';
     const origin = typeof window === 'undefined' ? '' : window.location.origin;
     return `${origin}/api/spots/tiles/{z}/{x}/{y}.mvt${suffix}`;
-  }, [filters]);
+  }, [filters, spotFilters]);
 
   const handleStyleChange = useCallback((next: MapStyleKey) => {
     setStyleKey(next);

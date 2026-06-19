@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import {
+  parseSpotFilterParams,
+  splitFishingTypes,
+  activeAccessibilityFlags,
+} from '@/lib/spot-filter-params';
 
 interface TileParams {
   z: string;
@@ -15,12 +20,6 @@ interface MvtRow {
 function parseTileParam(value: string): number | null {
   if (!/^\d+$/.test(value)) return null;
   return Number(value);
-}
-
-function parseNumberParam(value: string | null): number | null {
-  if (!value) return null;
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
 }
 
 export async function GET(
@@ -44,36 +43,92 @@ export async function GET(
     }
 
     const { searchParams } = new URL(request.url);
-    const waterTypes = searchParams.getAll('waterType').filter(Boolean);
-    const fishingTypes = searchParams.getAll('fishingType').filter(Boolean);
-    const minRating = parseNumberParam(searchParams.get('minRating'));
-    const minFishabilityScore = parseNumberParam(searchParams.get('minFishabilityScore'));
+
+    // Vocabulaire de filtres PARTAGÉ avec /api/spots (liste). `parseSpotFilterParams`
+    // est la source unique : la carte (tuiles) et la liste appliquent désormais
+    // exactement les mêmes filtres « sortie » (espèce, mode/technique, accès…).
+    const shared = parseSpotFilterParams(searchParams);
+    const { modes, techniques } = splitFishingTypes(shared);
+
+    // Params spécifiques carte non couverts par la liste (panneau overlay MapFilters) :
+    // `origin`, `premiumOnly` et l'alias legacy `fishingType` (singulier, sans
+    // distinction mode/technique). Conservés pour ne pas régresser ce panneau.
     const origin = searchParams.get('origin');
-    const pmr = searchParams.get('pmr') === 'true';
-    const nightFishing = searchParams.get('nightFishing') === 'true';
     const premiumOnly = searchParams.get('premiumOnly') === 'true';
+    const legacyFishingTypes = searchParams.getAll('fishingType').filter(Boolean);
 
     const filters: Prisma.Sql[] = [];
-    if (waterTypes.length > 0) {
-      filters.push(Prisma.sql`s."waterType"::text IN (${Prisma.join(waterTypes)})`);
+
+    if (shared.waterType && shared.waterType.length > 0) {
+      filters.push(Prisma.sql`s."waterType"::text IN (${Prisma.join(shared.waterType)})`);
     }
-    if (fishingTypes.length > 0) {
-      filters.push(Prisma.sql`s."fishingTypes"::text[] && ARRAY[${Prisma.join(fishingTypes)}]::text[]`);
+    if (shared.waterCategory) {
+      filters.push(Prisma.sql`s."waterCategory"::text = ${shared.waterCategory}`);
     }
-    if (minRating != null && minRating > 0) {
-      filters.push(Prisma.sql`s."averageRating" >= ${minRating}`);
+    if (shared.search) {
+      const like = `%${shared.search}%`;
+      filters.push(Prisma.sql`(s."name" ILIKE ${like} OR s."commune" ILIKE ${like})`);
     }
-    if (minFishabilityScore != null && minFishabilityScore > 0) {
-      filters.push(Prisma.sql`s."fishabilityScore" >= ${minFishabilityScore}`);
+    if (shared.department) {
+      filters.push(Prisma.sql`s."department" = ${shared.department}`);
     }
+
+    // Accès au droit de pêche (FREE inclut les spots sans accessType, cf. /api/spots).
+    if (shared.accessType) {
+      if (shared.accessType === 'FREE') {
+        filters.push(Prisma.sql`(s."accessType" = 'FREE'::"AccessType" OR s."accessType" IS NULL)`);
+      } else {
+        filters.push(Prisma.sql`s."accessType"::text = ${shared.accessType}`);
+      }
+    }
+
+    // Espèce précise (relation SpotSpecies par id) et catégorie de poisson (par enum).
+    if (shared.species && shared.species.length > 0) {
+      filters.push(Prisma.sql`EXISTS (
+        SELECT 1 FROM "spot_species" ss
+        WHERE ss."spotId" = s."id" AND ss."speciesId" IN (${Prisma.join(shared.species)})
+      )`);
+    }
+    if (shared.fishCategory && shared.fishCategory.length > 0) {
+      filters.push(Prisma.sql`EXISTS (
+        SELECT 1 FROM "spot_species" ss
+        JOIN "fish_species" fs ON fs."id" = ss."speciesId"
+        WHERE ss."spotId" = s."id" AND fs."category"::text IN (${Prisma.join(shared.fishCategory)})
+      )`);
+    }
+
+    // Mode + technique = même colonne `fishingTypes` (array enum) : intersection des deux
+    // intentions, exactement comme /api/spots. Alias legacy `fishingType` traité à part.
+    if (modes.length > 0) {
+      filters.push(Prisma.sql`s."fishingTypes"::text[] && ARRAY[${Prisma.join(modes)}]::text[]`);
+    }
+    if (techniques.length > 0) {
+      filters.push(Prisma.sql`s."fishingTypes"::text[] && ARRAY[${Prisma.join(techniques)}]::text[]`);
+    }
+    if (legacyFishingTypes.length > 0) {
+      filters.push(
+        Prisma.sql`s."fishingTypes"::text[] && ARRAY[${Prisma.join(legacyFishingTypes)}]::text[]`,
+      );
+    }
+
+    if (shared.minRating != null && shared.minRating > 0) {
+      filters.push(Prisma.sql`s."averageRating" >= ${shared.minRating}`);
+    }
+    if (shared.minFishabilityScore != null && shared.minFishabilityScore > 0) {
+      filters.push(Prisma.sql`s."fishabilityScore" >= ${shared.minFishabilityScore}`);
+    }
+    if (shared.maxFishabilityScore != null && shared.maxFishabilityScore > 0) {
+      filters.push(Prisma.sql`s."fishabilityScore" <= ${shared.maxFishabilityScore}`);
+    }
+
+    // Accès physique : booléens dans le JSON `accessibility` (parking/boatLaunch/pmr/night).
+    // Le flag est borné en `text` (clé JSON) ; les valeurs proviennent d'une liste figée.
+    for (const flag of activeAccessibilityFlags(shared)) {
+      filters.push(Prisma.sql`s."accessibility"->>(${flag}::text) = 'true'`);
+    }
+
     if (origin === 'USER') {
       filters.push(Prisma.sql`s."dataOrigin" = ${'USER'}::"DataOrigin"`);
-    }
-    if (pmr) {
-      filters.push(Prisma.sql`s."accessibility"->>'pmr' = 'true'`);
-    }
-    if (nightFishing) {
-      filters.push(Prisma.sql`s."accessibility"->>'nightFishing' = 'true'`);
     }
     if (premiumOnly) {
       filters.push(Prisma.sql`s."isPremium" = true`);
