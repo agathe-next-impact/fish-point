@@ -182,11 +182,11 @@ export function SpotDetail({ spot, reliability }: SpotDetailProps) {
 
           <SpotSpawnCalendar species={spot.species} />
 
-          <SpotWaterQuality spotId={spot.id} />
+          <SpotWaterQuality spotId={spot.id} spotSlug={spot.slug} />
 
-          <SpotObservations spotId={spot.id} />
+          <SpotObservations spotId={spot.id} spotSlug={spot.slug} />
 
-          <SpotBiodiversity spotId={spot.id} />
+          <SpotBiodiversity spotId={spot.id} spotSlug={spot.slug} />
 
           <SpotProtectedZones spotId={spot.id} />
 

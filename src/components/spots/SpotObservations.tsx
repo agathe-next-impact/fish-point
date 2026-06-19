@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Microscope } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DataUnavailable, shouldShowDataUnavailable } from './DataUnavailable';
 
 interface ObservationCampaign {
   campaign: string;
@@ -20,17 +21,21 @@ interface ObservationCampaign {
 
 async function fetchObservations(spotId: string): Promise<ObservationCampaign[]> {
   const res = await fetch(`/api/spots/${spotId}/observations`);
-  if (!res.ok) return [];
+  // Throw sur échec HTTP : react-query expose `isError`, ce qui permet de
+  // distinguer une panne d'un succès vide.
+  if (!res.ok) throw new Error(`observations fetch failed: ${res.status}`);
   const json = await res.json();
   return json.data ?? [];
 }
 
 interface SpotObservationsProps {
   spotId: string;
+  /** Slug du spot — cible du CTA quand la section est vide. */
+  spotSlug?: string;
 }
 
-export function SpotObservations({ spotId }: SpotObservationsProps) {
-  const { data, isLoading } = useQuery({
+export function SpotObservations({ spotId, spotSlug }: SpotObservationsProps) {
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['spotObservations', spotId],
     queryFn: () => fetchObservations(spotId),
     staleTime: 3_600_000, // 1 hour (historical data, rarely changes)
@@ -52,7 +57,13 @@ export function SpotObservations({ spotId }: SpotObservationsProps) {
     );
   }
 
-  if (!data || data.length === 0) return null;
+  const isEmpty = !data || data.length === 0;
+  if (isEmpty) {
+    // Succès vide → message explicite ; erreur → on ne masque pas la panne.
+    return shouldShowDataUnavailable({ isLoading, isError, isEmpty }) ? (
+      <DataUnavailable spotSlug={spotSlug} sectionLabel="Observations scientifiques" />
+    ) : null;
+  }
 
   return (
     <section>
