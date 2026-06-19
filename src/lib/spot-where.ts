@@ -101,6 +101,19 @@ export function buildSpotWhere(filters: SpotQueryFilters): Prisma.SpotWhereInput
     and.push({ accessibility: { path: [flag], equals: true } });
   }
 
+  // ── Filtres « affichage » (absorbés depuis l'ancien overlay carte `MapFilters`,
+  // sous-étape 4 ; appliqués à la LISTE comme à la carte depuis la sous-étape 5) ──
+  // Même sémantique que la route tuiles : `premiumOnly` ⇒ `isPremium = true` ;
+  // `showAutoDiscovered === false` (⇔ query `origin=USER`) ⇒ ne garder que les spots
+  // saisis par un pêcheur (`dataOrigin = USER`). Clés de premier niveau scalaires,
+  // sans collision avec `OR`/`AND` (mêmes noms exacts que `schema.prisma`).
+  if (filters.premiumOnly === true) {
+    where.isPremium = true;
+  }
+  if (filters.showAutoDiscovered === false) {
+    where.dataOrigin = 'USER';
+  }
+
   if (filters.minRating !== undefined && filters.minRating > 0) {
     where.averageRating = { gte: filters.minRating };
   }

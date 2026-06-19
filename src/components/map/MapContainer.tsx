@@ -49,10 +49,11 @@ interface MapContainerProps {
   isLoading?: boolean;
   className?: string;
   /**
-   * Filtres « sortie » de l'Explorer — source d'état UNIQUE partagée avec la liste.
-   * Sérialisés dans l'URL des tuiles MVT (marqueurs) ET appliqués au filtre JS des
-   * couches heatmap/fishability, pour que carte et liste appliquent exactement les
-   * mêmes filtres (convergence carte ↔ liste, sous-étape 4 : un seul état de filtres).
+   * Filtres « sortie »/« affichage » de l'Explorer — source d'état UNIQUE partagée avec
+   * la liste. Sérialisés dans l'URL des tuiles MVT (marqueurs). Les couches
+   * heatmap/fishability, elles, consomment `spots` (bbox) déjà filtré CÔTÉ SERVEUR avec
+   * le même jeu de filtres (sous-étape 5 : suppression de la copie JS de filtrage). La
+   * carte et la liste appliquent donc exactement les mêmes filtres.
    * Optionnel par robustesse : absent ⇒ aucun filtre (la carte affiche tout).
    */
   spotFilters?: SpotQueryFilters;
@@ -82,40 +83,6 @@ export function MapContainer({
     () => (styleKey === MAP_STYLE_KEYS.satellite ? buildSatelliteStyle() : getDefaultVectorStyle()),
     [styleKey],
   );
-
-  // Filtre JS client pour les couches heatmap/fishability (les marqueurs MVT, eux,
-  // sont filtrés côté serveur par les tuiles). Dérivé des filtres UNIFIÉS `activeFilters` :
-  // mêmes filtres que la liste et que les tuiles, plus aucune divergence d'état.
-  // NOTE (sous-étape 5) : cette copie JS pourra disparaître au profit des tuiles seules.
-  const filteredSpots = useMemo(() => {
-    const waterTypes = activeFilters.waterType ?? [];
-    // Mode et technique ciblent la même colonne `fishingTypes` ; intersection des deux
-    // intentions, à l'identique de `buildSpotWhere` (hasSome modes ET hasSome techniques).
-    const modes = activeFilters.fishingMode ?? [];
-    const techniques = activeFilters.fishingTechnique ?? [];
-    const minRating = activeFilters.minRating ?? 0;
-    const minScore = activeFilters.minFishabilityScore ?? 0;
-
-    return spots.filter((spot) => {
-      if (waterTypes.length > 0 && !waterTypes.includes(spot.waterType)) return false;
-      if (modes.length > 0 && !spot.fishingTypes.some((t) => modes.includes(t))) return false;
-      if (techniques.length > 0 && !spot.fishingTypes.some((t) => techniques.includes(t))) {
-        return false;
-      }
-      if (minRating > 0 && spot.averageRating < minRating) return false;
-      if (
-        minScore > 0 &&
-        (spot.fishabilityScore == null || spot.fishabilityScore < minScore)
-      ) {
-        return false;
-      }
-      if (activeFilters.showAutoDiscovered === false && spot.dataOrigin !== 'USER') return false;
-      if (activeFilters.pmr && !spot.accessibility?.pmr) return false;
-      if (activeFilters.nightFishing && !spot.accessibility?.nightFishing) return false;
-      if (activeFilters.premiumOnly && !spot.isPremium) return false;
-      return true;
-    });
-  }, [activeFilters, spots]);
 
   const spotTileUrl = useMemo(() => {
     // Source d'état UNIFIÉE : les marqueurs MVT honorent EXACTEMENT les filtres de la liste
@@ -219,9 +186,11 @@ export function MapContainer({
           />
         )}
 
-        {activeLayers.includes('heatmap') && <HeatmapLayer spots={filteredSpots} />}
+        {/* `spots` (bbox) est déjà filtré côté serveur avec le même jeu que les tuiles
+            et la liste — plus de copie JS de filtrage (sous-étape 5). */}
+        {activeLayers.includes('heatmap') && <HeatmapLayer spots={spots} />}
 
-        {activeLayers.includes('fishability') && <FishabilityLayer spots={filteredSpots} />}
+        {activeLayers.includes('fishability') && <FishabilityLayer spots={spots} />}
 
         {activeLayers.includes('regulations') && <RegulationZones />}
 
@@ -235,7 +204,7 @@ export function MapContainer({
       <MapControls
         styleKey={styleKey}
         onStyleChange={handleStyleChange}
-        visibleSpotCount={filteredSpots.length}
+        visibleSpotCount={spots.length}
         isLoading={isLoading}
       />
     </div>

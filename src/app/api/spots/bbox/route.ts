@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getCached } from '@/lib/redis';
+import { buildSpotFilterSql } from '@/lib/spot-where-sql';
+import { serializeSpotFilters, parseSpotFilterParams } from '@/lib/spot-filter-params';
 import type { SpotListItem } from '@/types/spot';
 
 function roundCoord(value: number): number {
@@ -29,7 +31,23 @@ export async function GET(request: NextRequest) {
       east: roundCoord(east),
       west: roundCoord(west),
     };
-    const cacheKey = `spots:bbox:${rounded.north}:${rounded.south}:${rounded.east}:${rounded.west}:${limit}`;
+
+    // Filtres « sortie » + « affichage » : MÊME source SQL que les tuiles MVT
+    // (`buildSpotFilterSql`), alignée sur la liste (`buildSpotWhere`). Les couches
+    // heatmap/fishability (qui consomment cette bbox) filtrent donc EXACTEMENT comme
+    // les marqueurs et la liste — fin de la copie JS `MapContainer.filteredSpots`
+    // (convergence carte ↔ liste, sous-étape 5).
+    const filters = buildSpotFilterSql(searchParams);
+    const filterSql = filters.length > 0
+      ? Prisma.sql`AND ${Prisma.join(filters, ' AND ')}`
+      : Prisma.empty;
+
+    // La clé de cache DOIT inclure les filtres, sinon une zone identique sous deux jeux
+    // de filtres distincts renverrait le même résultat. On réutilise la sérialisation
+    // canonique (ordre stable, valeurs vides omises) après re-parse défensif (ignore les
+    // valeurs arbitraires : seuls les filtres connus entrent dans la clé).
+    const filterKey = serializeSpotFilters(parseSpotFilterParams(searchParams)).toString();
+    const cacheKey = `spots:bbox:${rounded.north}:${rounded.south}:${rounded.east}:${rounded.west}:${limit}:${filterKey}`;
 
     const data = await getCached(cacheKey, async () => {
       const spots = await prisma.$queryRaw<RawMapSpot[]>(Prisma.sql`
@@ -65,6 +83,7 @@ export async function GET(request: NextRequest) {
             s."geometry",
             ST_MakeEnvelope(${rounded.west}, ${rounded.south}, ${rounded.east}, ${rounded.north}, 4326)::geography
           )
+          ${filterSql}
         ORDER BY s."averageRating" DESC
         LIMIT ${limit}
       `);

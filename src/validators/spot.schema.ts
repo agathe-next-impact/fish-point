@@ -139,6 +139,12 @@ export const spotsListQuerySchema = z.object({
   boatLaunch: boolFlag,
   pmr: boolFlag,
   nightFishing: boolFlag,
+  // ── Filtres « affichage » (absorbés depuis l'ancien overlay carte) ──
+  // Mêmes noms de params que la sérialisation partagée et la route tuiles :
+  // `premiumOnly=true` et `origin=USER` (⇔ exclure les spots auto-découverts).
+  // Appliqués désormais à la LISTE comme à la carte (parité, sous-étape 5).
+  premiumOnly: boolFlag,
+  origin: z.literal('USER').optional(),
   lat: numeric(z.number().min(-90).max(90)).optional(),
   lng: numeric(z.number().min(-180).max(180)).optional(),
   radius: numeric(z.number().min(100).max(200000)).optional(),
@@ -175,5 +181,10 @@ export function toSpotQueryFilters(q: SpotsListQuery): SpotQueryFilters {
     boatLaunch: q.boatLaunch,
     pmr: q.pmr,
     nightFishing: q.nightFishing,
+    // Filtres « affichage » : symétrique de `serializeSpotFilters`. On ne pose une
+    // contrainte canonique QUE pour la valeur restrictive (sinon `undefined`), pour
+    // que `buildSpotWhere` n'ajoute la clause que dans ce cas (cf. ses gardes ===).
+    premiumOnly: q.premiumOnly === true ? true : undefined,
+    showAutoDiscovered: q.origin === 'USER' ? false : undefined,
   };
 }

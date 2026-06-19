@@ -77,6 +77,12 @@ export default function ExplorerPage() {
     boatLaunch: gridFilters.boatLaunch,
     pmr: gridFilters.pmr,
     nightFishing: gridFilters.nightFishing,
+    // Filtres « affichage » transportés vers la LISTE (parité avec la carte,
+    // sous-étape 5). On émet le VOCABULAIRE WIRE attendu par `/api/spots` (et la
+    // route tuiles) : `premiumOnly=true` quand actif, `origin=USER` quand on masque
+    // les spots auto-découverts. `undefined` sinon (omis par le sérialiseur).
+    premiumOnly: gridFilters.premiumOnly === true ? true : undefined,
+    origin: gridFilters.showAutoDiscovered === false ? 'USER' : undefined,
     // Distance « autour de moi » : la bbox carte committée prime côté serveur.
     lat: gridFilters.lat,
     lng: gridFilters.lng,
@@ -183,6 +189,10 @@ export default function ExplorerPage() {
 
   const { spots: bboxSpots, setBounds, isFetching: isBboxFetching } = useMapSpots({
     enabled: isMapView && needsBboxSpots,
+    // Filtres « sortie »/« affichage » appliqués CÔTÉ SERVEUR à la bbox (couches
+    // heatmap/fishability) : exactement le même jeu que les tuiles MVT et la liste.
+    // Supprime le besoin de la copie JS de filtrage de `MapContainer` (sous-étape 5).
+    filters: mapFilters,
   });
   const [privateBounds, setPrivateBounds] = useState<Bounds | null>(null);
   const { data: privateSpotsData } = usePrivateSpotsBbox(

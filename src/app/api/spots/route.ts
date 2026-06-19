@@ -37,6 +37,10 @@ export async function GET(request: NextRequest) {
       boatLaunch: searchParams.get('boatLaunch') ?? undefined,
       pmr: searchParams.get('pmr') ?? undefined,
       nightFishing: searchParams.get('nightFishing') ?? undefined,
+      // Filtres « affichage » (parité liste/carte, sous-étape 5) : mêmes noms de
+      // params que la route tuiles — `premiumOnly=true` et `origin=USER`.
+      premiumOnly: searchParams.get('premiumOnly') ?? undefined,
+      origin: searchParams.get('origin') ?? undefined,
       lat: searchParams.get('lat') ?? undefined,
       lng: searchParams.get('lng') ?? undefined,
       radius: searchParams.get('radius') ?? undefined,

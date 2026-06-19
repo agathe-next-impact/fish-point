@@ -134,6 +134,26 @@ describe('buildSpotWhere', () => {
     ).toBeUndefined();
   });
 
+  // ── Filtres « affichage » (parité liste/carte, sous-étape 5) ──
+  it('premiumOnly true → isPremium true (premier niveau) ; absent/false → ignoré', () => {
+    expect(buildSpotWhere({ premiumOnly: true }).isPremium).toBe(true);
+    expect(buildSpotWhere({ premiumOnly: false }).isPremium).toBeUndefined();
+    expect(buildSpotWhere({}).isPremium).toBeUndefined();
+  });
+
+  it('showAutoDiscovered false → dataOrigin USER ; true/absent → pas de contrainte', () => {
+    expect(buildSpotWhere({ showAutoDiscovered: false }).dataOrigin).toBe('USER');
+    expect(buildSpotWhere({ showAutoDiscovered: true }).dataOrigin).toBeUndefined();
+    expect(buildSpotWhere({}).dataOrigin).toBeUndefined();
+  });
+
+  it('premium + masquage auto-découverts cumulés (deux clés scalaires, pas de AND)', () => {
+    const where = buildSpotWhere({ premiumOnly: true, showAutoDiscovered: false });
+    expect(where.isPremium).toBe(true);
+    expect(where.dataOrigin).toBe('USER');
+    expect(where.AND).toBeUndefined();
+  });
+
   it('jeu complet : clés de premier niveau + AND ordonné (FREE, species, mode, technique, accès)', () => {
     const filters: SpotQueryFilters = {
       department: '74',
