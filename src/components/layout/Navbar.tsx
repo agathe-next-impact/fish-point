@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 
 const NAV_LINKS = [
   { href: '/spots', label: 'Explorer' },
+  { href: '/enregistres', label: 'Enregistrés' },
   { href: '/explore', label: 'Par département' },
   { href: '/regulations', label: 'Réglementation' },
 ];

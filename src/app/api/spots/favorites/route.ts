@@ -2,20 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { DEFAULT_LIST_NAME, normalizeListName } from '@/lib/collections';
 
 /**
- * Frontière favoris. `listName` permet déjà les collections au niveau data
- * (À tester / Favoris / Sortie de samedi). L'UI de sélection de collection est
- * hors périmètre de cette tranche : on garde le défaut « default ».
+ * Frontière favoris. `listName` porte les collections au niveau data (cf.
+ * `lib/collections.ts`) : une collection = l'ensemble des favoris d'un même
+ * `listName`. Le défaut reste « default » (1-clic « Enregistrer »). La
+ * normalisation (trim, compaction, troncature à la longueur max, retour au défaut
+ * si vide) est l'unique autorité : pas de `.max()` qui rejetterait — on tronque.
  */
+const listNameSchema = z
+  .string()
+  .default(DEFAULT_LIST_NAME)
+  .transform(normalizeListName);
+
 const saveFavoriteSchema = z.object({
   spotId: z.string().min(1),
-  listName: z.string().min(1).max(60).default('default'),
+  listName: listNameSchema,
 });
 
 const removeFavoriteSchema = z.object({
   spotId: z.string().min(1),
-  listName: z.string().min(1).max(60).default('default'),
+  listName: listNameSchema,
 });
 
 export async function GET() {

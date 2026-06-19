@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
 import { getSavedSpots, type SavedSpotRecord } from '@/lib/offline-db';
 import { sortByDistance } from '@/lib/geo-distance';
+import { DEFAULT_LIST_NAME } from '@/lib/collections';
 import type { WaterType } from '@/types/spot';
 
 /**
@@ -26,6 +27,8 @@ export interface SavedSpotView {
   waterType: WaterType | null;
   /** Distance en mètres depuis la position de l'utilisateur, si géoloc connue. */
   distance?: number;
+  /** Collection (valeur `listName`) à laquelle ce spot appartient. */
+  listName: string;
   /** Provenance : sync multi-appareils (serveur) vs local seul (invité). */
   source: 'server' | 'local';
 }
@@ -33,6 +36,7 @@ export interface SavedSpotView {
 /** Forme réelle d'un favori renvoyé par GET /api/spots/favorites (cf. route handler). */
 interface ServerFavorite {
   spotId: string;
+  listName: string;
   spot: {
     id: string;
     name: string;
@@ -59,6 +63,7 @@ async function fetchServerFavorites(): Promise<SavedSpotView[]> {
       longitude: fav.spot.longitude,
       department: fav.spot.department,
       waterType: fav.spot.waterType,
+      listName: fav.listName && fav.listName.length > 0 ? fav.listName : DEFAULT_LIST_NAME,
       source: 'server' as const,
     }));
 }
@@ -72,6 +77,9 @@ function mapLocalRecords(records: SavedSpotRecord[]): SavedSpotView[] {
     longitude: rec.longitude,
     department: null,
     waterType: null,
+    // Le store invité n'a pas de collections serveur : tout retombe sur le défaut
+    // (« Favoris »). La gestion fine des collections est réservée au compte.
+    listName: DEFAULT_LIST_NAME,
     source: 'local' as const,
   }));
 }

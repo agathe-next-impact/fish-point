@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Bookmark, MapPin, Navigation, Route, LocateFixed, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { formatDistance } from '@/lib/map';
 import { WATER_TYPE_LABELS } from '@/lib/constants';
 import { getDepartmentName } from '@/config/departments';
 import { formatSpotName } from '@/lib/spot-name';
+import { deriveCollections } from '@/lib/collections';
 
 /**
  * Espace « Enregistrés » (slice P1.1) — la liste des spots qu'un pêcheur a mis de
@@ -30,12 +31,34 @@ export default function SavedSpotsPage() {
 
   const { spots, isLoading, isError, isGuest } = useSavedSpots(origin);
 
+  // Collection active (valeur `listName`). `null` = « Tous ». L'utilisateur choisit ;
+  // on ne synchronise pas via effet — si la collection disparaît, `effectiveCollection`
+  // retombe sur « Tous » par dérivation (évite tout setState dans un effet).
+  const [activeCollection, setActiveCollection] = useState<string | null>(null);
+
+  // Collections distinctes dérivées des `listName` présents (« Favoris » d'abord).
+  const collections = useMemo(() => deriveCollections(spots), [spots]);
+
+  const effectiveCollection =
+    activeCollection !== null && collections.some((c) => c.listName === activeCollection)
+      ? activeCollection
+      : null;
+
+  // Spots du filtre actif. « Tous » quand aucune collection active.
+  const visibleSpots = useMemo(
+    () =>
+      effectiveCollection === null
+        ? spots
+        : spots.filter((s) => s.listName === effectiveCollection),
+    [spots, effectiveCollection],
+  );
+
   /**
    * « Préparer la sortie » : itinéraire multi-arrêts Google Maps depuis la
    * position courante vers le 1er spot, en passant par les suivants (jusqu'à 9
-   * waypoints, limite Google Maps). Minimal : réutilise le deep-link universel.
+   * waypoints, limite Google Maps). Suit le filtre de collection actif.
    */
-  const tripUrl = useMemo(() => buildTripUrl(spots), [spots]);
+  const tripUrl = useMemo(() => buildTripUrl(visibleSpots), [visibleSpots]);
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -80,6 +103,30 @@ export default function SavedSpotsPage() {
         </p>
       )}
 
+      {!isLoading && !isError && spots.length > 0 && collections.length > 1 && (
+        <div
+          className="mb-4 flex flex-wrap gap-2"
+          role="group"
+          aria-label="Filtrer par collection"
+        >
+          <CollectionTab
+            label="Tous"
+            count={spots.length}
+            active={effectiveCollection === null}
+            onClick={() => setActiveCollection(null)}
+          />
+          {collections.map((collection) => (
+            <CollectionTab
+              key={collection.listName}
+              label={collection.label}
+              count={collection.count}
+              active={effectiveCollection === collection.listName}
+              onClick={() => setActiveCollection(collection.listName)}
+            />
+          ))}
+        </div>
+      )}
+
       {isLoading ? (
         <ul className="grid gap-3" aria-busy="true">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -105,11 +152,17 @@ export default function SavedSpotsPage() {
               pour les retrouver partout.
             </p>
           )}
-          <ul className="grid gap-3">
-            {spots.map((spot) => (
-              <SavedSpotRow key={spot.spotId} spot={spot} />
-            ))}
-          </ul>
+          {visibleSpots.length === 0 ? (
+            <p className="py-12 text-center text-fs-muted">
+              Aucun spot dans cette collection pour le moment.
+            </p>
+          ) : (
+            <ul className="grid gap-3">
+              {visibleSpots.map((spot) => (
+                <SavedSpotRow key={spot.spotId} spot={spot} />
+              ))}
+            </ul>
+          )}
         </>
       )}
     </div>
@@ -180,6 +233,35 @@ function EmptyState({ isGuest }: { isGuest: boolean }) {
         <Button>Explorer les spots</Button>
       </Link>
     </div>
+  );
+}
+
+/** Onglet-filtre de collection. `aria-pressed` plutôt que tablist : simple filtre, pas de panneaux. */
+function CollectionTab({
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={
+        active
+          ? 'inline-flex items-center gap-1.5 rounded-full border border-fs-accent bg-fs-accent px-3 py-1 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+          : 'inline-flex items-center gap-1.5 rounded-full border border-line bg-card px-3 py-1 text-sm font-semibold text-fs-muted transition-colors hover:border-fs-accent hover:text-fs-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+      }
+    >
+      {label}
+      <span className={active ? 'text-white/80' : 'text-fs-muted/70'}>{count}</span>
+    </button>
   );
 }
 
