@@ -30,6 +30,13 @@ export interface SpotListItem {
   fishabilityScore: number | null;
   dataOrigin: string;
   accessType: AccessType | null;
+  /**
+   * Espèces documentées du spot (jointure légère `speciesId`+`abundance`, ajoutée au
+   * `spotListSelect`). Sert au verdict « Adapté à votre sortie » par item de liste
+   * (différenciateur = abondance de l'espèce ciblée). `SpotDetail` le spécialise en
+   * `SpotSpeciesData[]` (sur-ensemble compatible).
+   */
+  species?: Array<{ speciesId: string; abundance: Abundance }>;
 }
 
 export interface AccessDetails {

@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { MapPin, Navigation, Star } from 'lucide-react';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { AccessTag } from '@/components/ui/access-tag';
+import { VerdictBadge } from '@/components/spots/VerdictBadge';
 import { SaveSpotButton } from '@/components/spots/SaveSpotButton';
 import { WATER_TYPE_LABELS, WATER_CATEGORY_LABELS, FISHING_TYPE_LABELS } from '@/lib/constants';
 import { getDepartmentName } from '@/config/departments';
@@ -11,6 +12,7 @@ import { formatDistance } from '@/lib/map';
 import { buildDirectionsUrl } from '@/lib/directions';
 import { formatSpotName } from '@/lib/spot-name';
 import { getOrthoPhotoUrl } from '@/services/ign-ortho.service';
+import { deriveListItemTripMatch, type TripMatchListContext } from '@/lib/trip-match';
 import type { SpotListItem } from '@/types/spot';
 
 interface SpotCardProps {
@@ -21,12 +23,38 @@ interface SpotCardProps {
    * Chaîne vide ⇒ lien inchangé (fiche en score global). Source : `buildTripContextQuery`.
    */
   tripQuery?: string;
+  /**
+   * Contexte « sortie » (espèce ciblée + position) pour le verdict PAR ITEM affiché
+   * en pastille sur la carte. Fourni UNIQUEMENT quand une espèce est filtrée (la page
+   * gate la propagation). Absent / sans espèce ⇒ aucun badge verdict (honnêteté) :
+   * la carte garde son indice global existant.
+   */
+  tripContext?: TripMatchListContext;
 }
 
-export const SpotCard = memo(function SpotCard({ spot, tripQuery = '' }: SpotCardProps) {
+export const SpotCard = memo(function SpotCard({ spot, tripQuery = '', tripContext }: SpotCardProps) {
   const displayName = formatSpotName({ name: spot.name, commune: spot.commune, waterType: spot.waterType });
   const spotHref = tripQuery ? `/spots/${spot.slug}?${tripQuery}` : `/spots/${spot.slug}`;
   const imageUrl = spot.primaryImage || getOrthoPhotoUrl(spot.latitude, spot.longitude, 600, 400);
+
+  // Verdict « Adapté à votre sortie » par item : calculé seulement si un contexte
+  // sortie (espèce ciblée) est fourni. `deriveListItemTripMatch` renvoie `null`
+  // sans espèce → pas de badge. Proxy d'accès au bord : parking ou mise à l'eau ⇒
+  // praticable ; sinon inconnu (`null`, sans pénalité). Pur, donc pas de useMemo
+  // nécessaire (composant déjà mémoïsé, calcul O(1) sur peu d'espèces).
+  const tripMatch = tripContext
+    ? deriveListItemTripMatch(
+        {
+          latitude: spot.latitude,
+          longitude: spot.longitude,
+          species: spot.species,
+          accessible: spot.accessibility
+            ? spot.accessibility.parking || spot.accessibility.boatLaunch
+            : null,
+        },
+        tripContext,
+      )
+    : null;
   const secondaryChip =
     (spot.waterCategory && WATER_CATEGORY_LABELS[spot.waterCategory]) ||
     (spot.fishingTypes?.[0] && FISHING_TYPE_LABELS[spot.fishingTypes[0]]) ||
@@ -78,6 +106,18 @@ export const SpotCard = memo(function SpotCard({ spot, tripQuery = '' }: SpotCar
               {getDepartmentName(spot.department)}
             </span>
           </div>
+
+          {/*
+            Verdict « Adapté à votre sortie » par item — affiché UNIQUEMENT en
+            contexte sortie (espèce filtrée). Permet de comparer les spots avant de
+            cliquer. Vue cohérente du même barème que la fiche (mêmes seuils/couleurs),
+            volontairement partielle côté liste (cf. `deriveListItemTripMatch`).
+          */}
+          {tripMatch && (
+            <div className="mt-2.5">
+              <VerdictBadge verdict={tripMatch.verdict} score={tripMatch.score} />
+            </div>
+          )}
 
           <div className="mt-3 flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-1.5">

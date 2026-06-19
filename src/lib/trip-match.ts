@@ -29,6 +29,7 @@
 
 import type { Abundance } from '@prisma/client';
 import type { ReliabilityTier } from '@/lib/reliability';
+import { haversineMeters } from '@/lib/geo-distance';
 
 /** Statut réglementaire dérivé des régulations actives du spot. */
 export type RegulationStatus =
@@ -82,10 +83,19 @@ export interface TripMatchInput {
    * dans le sous-score, mais ne le pénalise pas).
    */
   accessible: boolean | null;
-  /** Statut réglementaire dérivé des régulations actives. */
-  regulationStatus: RegulationStatus;
-  /** Palier de fiabilité des données (helper `reliability`). */
-  reliability: ReliabilityTier;
+  /**
+   * Statut réglementaire dérivé des régulations actives. `null` ⇒ régulations non
+   * chargées par cet appelant (ex. liste Explorer, qui ne joint pas les régulations
+   * pour rester léger) ⇒ composant normalisé hors barème. À ne PAS confondre avec
+   * `'unknown'` (régulations chargées mais non vérifiées, mi-points appliqués).
+   */
+  regulationStatus: RegulationStatus | null;
+  /**
+   * Palier de fiabilité des données (helper `reliability`). `null` ⇒ signaux de
+   * fiabilité non disponibles pour cet appelant (ex. liste Explorer) ⇒ composant
+   * normalisé hors barème (ni gagné ni perdu).
+   */
+  reliability: ReliabilityTier | null;
   /**
    * Activité récente réelle (agrégat public). Souvent VIDE en prod (aucune prise
    * publique) ⇒ composant normalisé hors barème, jamais compté comme un 0 dur.
@@ -443,9 +453,22 @@ function scoreDistance(input: TripMatchInput): TripMatchFactor {
   };
 }
 
-/** Sous-score « Réglementation » /10. Toujours évalué (statut au minimum inconnu). */
+/**
+ * Sous-score « Réglementation » /10. Évalué dès qu'un statut réglementaire est
+ * fourni (au minimum `'unknown'`). `null` ⇒ régulations NON chargées par l'appelant
+ * (ex. liste Explorer, qui ne joint pas les régulations) ⇒ non évalué, hors barème.
+ */
 function scoreRegulation(input: TripMatchInput): TripMatchFactor {
   const max = MAX.regulation;
+  if (input.regulationStatus === null) {
+    return {
+      label: 'Réglementation',
+      points: 0,
+      max,
+      note: 'Réglementation non chargée ici — vérifiée sur la fiche du spot.',
+      unavailable: true,
+    };
+  }
   const config: Record<RegulationStatus, { ratio: number; note: string }> = {
     clear: { ratio: 1, note: 'Aucune interdiction active connue.' },
     unknown: {
@@ -468,9 +491,22 @@ function scoreRegulation(input: TripMatchInput): TripMatchFactor {
   };
 }
 
-/** Sous-score « Fiabilité des données » /5. Toujours évalué. */
+/**
+ * Sous-score « Fiabilité des données » /5. Évalué dès qu'un palier est fourni.
+ * `null` ⇒ signaux de fiabilité non disponibles pour l'appelant (ex. liste
+ * Explorer) ⇒ non évalué, hors barème.
+ */
 function scoreReliability(input: TripMatchInput): TripMatchFactor {
   const max = MAX.reliability;
+  if (input.reliability === null) {
+    return {
+      label: 'Fiabilité des données',
+      points: 0,
+      max,
+      note: 'Fiabilité détaillée non chargée ici — disponible sur la fiche du spot.',
+      unavailable: true,
+    };
+  }
   return {
     label: 'Fiabilité des données',
     points: pointsFromRatio(RELIABILITY_RATIO[input.reliability], max),
@@ -537,4 +573,76 @@ export function computeTripMatch(input: TripMatchInput): TripMatchResult {
   const score = possible > 0 ? Math.round((earned / possible) * 100) : 0;
 
   return { score, verdict: deriveVerdict(score), breakdown };
+}
+
+/**
+ * Données d'UN spot de liste réellement disponibles pour le verdict « sortie »
+ * (sous-ensemble honnête de `SpotListItem`). Volontairement minimal : la liste
+ * Explorer ne joint PAS les régulations, les signaux de fiabilité, ni le
+ * `dynamicScore` du jour — elle ne porte donc PAS ces dimensions (cf. écart liste↔fiche).
+ */
+export interface TripMatchListItem {
+  latitude: number;
+  longitude: number;
+  /**
+   * Espèces documentées sur ce spot (jointure légère `speciesId`+`abundance`,
+   * ajoutée au `spotListSelect`). Absente ⇒ correspondance espèce non évaluée.
+   */
+  species?: readonly TripMatchSpecies[] | null;
+  /**
+   * Accès au bord praticable, dérivé de `accessibility` (parking || boatLaunch).
+   * `null` ⇒ inconnu (n'entre pas dans le sous-score, sans pénalité).
+   */
+  accessible: boolean | null;
+}
+
+/**
+ * Contexte « sortie » minimal nécessaire au verdict PAR ITEM côté liste : espèce(s)
+ * ciblée(s) et position utilisateur réelle (si partagée). Dérivé de `TripContext`
+ * mais découplé (la liste l'alimente directement depuis ses filtres).
+ */
+export interface TripMatchListContext {
+  /** Espèce(s) ciblée(s) (`speciesId`). Vide ⇒ pas de sortie ⇒ pas de verdict. */
+  targetSpecies: readonly string[];
+  /** Position utilisateur RÉELLE (géoloc « Autour de moi »). `null` ⇒ distance non évaluée. */
+  origin: { latitude: number; longitude: number } | null;
+}
+
+/**
+ * Dérive le verdict « Adapté à votre sortie » pour UN item de liste, à partir des
+ * SEULES données réellement disponibles par item (espèce + distance & accès). Vue
+ * COHÉRENTE du même barème/seuils que la fiche, mais volontairement partielle :
+ *
+ *   - Conditions du jour : `null` ici. La liste n'a que le `fishabilityScore` GLOBAL,
+ *     qui n'est PAS le `dynamicScore` du jour utilisé par la fiche — les mélanger
+ *     fausserait l'échelle. On exclut donc la dimension (hors barème) plutôt que de
+ *     fabriquer un proxy malhonnête.
+ *   - Activité récente : `[]` (aucune prise publique en prod, comme la fiche).
+ *   - Réglementation / Fiabilité : `null` (non jointes en liste pour rester légère).
+ *
+ * Conséquence assumée : le badge liste et le verdict fiche peuvent légèrement
+ * différer (la fiche a plus de dimensions évaluables). C'est cohérent — même échelle,
+ * mêmes seuils — et documenté. Retourne `null` SI aucune espèce n'est ciblée
+ * (honnêteté : pas de « sortie » à évaluer ⇒ l'appelant n'affiche aucun badge verdict).
+ */
+export function deriveListItemTripMatch(
+  item: TripMatchListItem,
+  context: TripMatchListContext,
+): TripMatchResult | null {
+  if (context.targetSpecies.length === 0) return null;
+
+  const distanceMeters = context.origin
+    ? haversineMeters(context.origin, { latitude: item.latitude, longitude: item.longitude })
+    : null;
+
+  return computeTripMatch({
+    targetSpecies: context.targetSpecies,
+    spotSpecies: item.species ?? [],
+    conditionsScore: null,
+    distanceMeters,
+    accessible: item.accessible,
+    regulationStatus: null,
+    reliability: null,
+    recentActivity: [],
+  });
 }

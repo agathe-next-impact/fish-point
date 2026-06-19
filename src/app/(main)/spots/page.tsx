@@ -13,7 +13,7 @@ import { ExplorerViewToggle } from '@/components/explore/ExplorerViewToggle';
 import { SearchThisAreaButton } from '@/components/explore/SearchThisAreaButton';
 import { SpotsEmptyState } from '@/components/explore/SpotsEmptyState';
 import { EMPTY_FILTERS, type GridFilters } from '@/components/spots/SpotGridFilters';
-import { buildTripContextQuery } from '@/lib/trip-match';
+import { buildTripContextQuery, type TripMatchListContext } from '@/lib/trip-match';
 import { useInfiniteSpots, useSpots } from '@/hooks/useSpots';
 import { useMapSpots } from '@/hooks/useMapSpots';
 import { usePrivateSpotsBbox } from '@/hooks/usePrivateSpots';
@@ -145,6 +145,20 @@ export default function ExplorerPage() {
       mode: gridFilters.fishingMode[0] ?? null,
       origin,
     });
+  }, [gridFilters]);
+
+  // Contexte sortie STRUCTURÉ passé aux cartes pour le verdict PAR ITEM (« Adapté
+  // X% »), affiché seulement quand une espèce est filtrée — même gating et même
+  // origin réel (géoloc « Autour de moi ») que `tripQuery`. `undefined` sans espèce
+  // ⇒ aucune pastille verdict sur les cartes (honnêteté : pas de sortie à évaluer).
+  const tripContext = useMemo<TripMatchListContext | undefined>(() => {
+    const species = gridFilters.species.map((s) => s.id);
+    if (species.length === 0) return undefined;
+    const origin =
+      gridFilters.lat !== undefined && gridFilters.lng !== undefined
+        ? { latitude: gridFilters.lat, longitude: gridFilters.lng }
+        : null;
+    return { targetSpecies: species, origin };
   }, [gridFilters]);
 
   const {
@@ -307,7 +321,7 @@ export default function ExplorerPage() {
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
                 {allSpots.map((spot, i) => (
                   <div key={spot.id} className="anim-rise" style={{ animationDelay: `${Math.min(i, 9) * 0.05}s` }}>
-                    <SpotCard spot={spot} tripQuery={tripQuery} />
+                    <SpotCard spot={spot} tripQuery={tripQuery} tripContext={tripContext} />
                   </div>
                 ))}
               </div>

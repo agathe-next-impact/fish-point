@@ -2,10 +2,12 @@ import { describe, it, expect } from 'vitest';
 import {
   buildTripContextQuery,
   computeTripMatch,
+  deriveListItemTripMatch,
   deriveRegulationStatus,
   readTripContext,
   type TripMatchInput,
   type TripMatchFactor,
+  type TripMatchListContext,
 } from '@/lib/trip-match';
 
 /** Contexte sortie « idéal » : espèce ciblée abondante, conditions bonnes, proche. */
@@ -301,5 +303,104 @@ describe('buildTripContextQuery ↔ readTripContext (round-trip, vocabulaire uni
   it('omet le mode quand il est null ⇒ contexte sans mode relu sans mode', () => {
     const ctx = readQuery(buildTripContextQuery({ species: ['pike'], mode: null }));
     expect(ctx!.mode).toBeNull();
+  });
+});
+
+describe('computeTripMatch — régulation/fiabilité null (appelant liste, hors barème)', () => {
+  it('marque la réglementation « non évaluée » quand elle est null', () => {
+    const r = computeTripMatch({ ...baseInput, regulationStatus: null });
+    const f = factor(r, 'Réglementation');
+    expect(f.unavailable).toBe(true);
+    expect(f.points).toBe(0);
+  });
+
+  it('marque la fiabilité « non évaluée » quand elle est null', () => {
+    const r = computeTripMatch({ ...baseInput, reliability: null });
+    const f = factor(r, 'Fiabilité des données');
+    expect(f.unavailable).toBe(true);
+  });
+
+  it('ne pénalise pas le score quand régulation et fiabilité sont null', () => {
+    // baseInput a clear (10/10) + high (5/5) = plein score sur ces dimensions ;
+    // les retirer ne doit pas faire MONTER le score artificiellement non plus :
+    // il reste cohérent car ces dimensions étaient au plein. On vérifie surtout
+    // qu'elles sortent du dénominateur (verdict toujours « très adapté »).
+    const r = computeTripMatch({ ...baseInput, regulationStatus: null, reliability: null });
+    expect(r.verdict).toBe('tres-adapte');
+    const evaluable = r.breakdown.filter((f) => !f.unavailable).map((f) => f.label);
+    expect(evaluable).not.toContain('Réglementation');
+    expect(evaluable).not.toContain('Fiabilité des données');
+  });
+});
+
+describe('deriveListItemTripMatch — verdict par item de liste', () => {
+  const ctx: TripMatchListContext = {
+    targetSpecies: ['pike'],
+    origin: { latitude: 45.5, longitude: 5.2 },
+  };
+
+  it('renvoie null sans espèce ciblée (pas de sortie ⇒ pas de badge)', () => {
+    const r = deriveListItemTripMatch(
+      { latitude: 45.5, longitude: 5.2, species: [{ speciesId: 'pike', abundance: 'HIGH' }], accessible: true },
+      { targetSpecies: [], origin: null },
+    );
+    expect(r).toBeNull();
+  });
+
+  it('évalue ESPÈCE + DISTANCE & ACCÈS et exclut le reste (cohérence liste↔fiche)', () => {
+    const r = deriveListItemTripMatch(
+      {
+        latitude: 45.51, // ~1 km de l'origin → proximité immédiate
+        longitude: 5.2,
+        species: [{ speciesId: 'pike', abundance: 'HIGH' }],
+        accessible: true,
+      },
+      ctx,
+    );
+    expect(r).not.toBeNull();
+    const evaluable = r!.breakdown.filter((f) => !f.unavailable).map((f) => f.label).sort();
+    // Seules les dimensions réellement disponibles par item sont évaluées.
+    expect(evaluable).toEqual(['Distance & accès', 'Espèce recherchée']);
+    // Conditions / activité / régulation / fiabilité : hors barème côté liste.
+    const unavailable = r!.breakdown.filter((f) => f.unavailable).map((f) => f.label).sort();
+    expect(unavailable).toEqual([
+      'Activité récente',
+      'Conditions du jour',
+      'Fiabilité des données',
+      'Réglementation',
+    ]);
+  });
+
+  it('valorise une espèce ciblée abondante et proche (verdict élevé)', () => {
+    const r = deriveListItemTripMatch(
+      {
+        latitude: 45.5,
+        longitude: 5.2, // distance ~0
+        species: [{ speciesId: 'pike', abundance: 'VERY_HIGH' }],
+        accessible: true,
+      },
+      ctx,
+    );
+    expect(r!.score).toBeGreaterThanOrEqual(70);
+    expect(r!.verdict).toBe('tres-adapte');
+  });
+
+  it('reste évaluable (espèce seule) quand la position est inconnue (origin null)', () => {
+    const r = deriveListItemTripMatch(
+      { latitude: 45.5, longitude: 5.2, species: [{ speciesId: 'pike', abundance: 'HIGH' }], accessible: null },
+      { targetSpecies: ['pike'], origin: null },
+    );
+    const evaluable = r!.breakdown.filter((f) => !f.unavailable).map((f) => f.label);
+    expect(evaluable).toEqual(['Espèce recherchée']);
+    expect(factor(r!, 'Distance & accès').unavailable).toBe(true);
+  });
+
+  it('null-safe : espèces absentes ⇒ correspondance non évaluée, sans crash', () => {
+    const r = deriveListItemTripMatch(
+      { latitude: 45.5, longitude: 5.2, species: null, accessible: null },
+      { targetSpecies: ['pike'], origin: null },
+    );
+    expect(r).not.toBeNull();
+    expect(factor(r!, 'Espèce recherchée').unavailable).toBe(true);
   });
 });
