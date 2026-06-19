@@ -94,6 +94,11 @@ export function SpotDetail({ spot, reliability }: SpotDetailProps) {
           averageRating={spot.averageRating}
           reviewCount={spot.reviewCount}
           reliability={reliability}
+          latitude={spot.latitude}
+          longitude={spot.longitude}
+          species={spot.species}
+          regulations={spot.regulations}
+          accessibility={spot.accessibility}
         />
       </div>
 
