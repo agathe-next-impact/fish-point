@@ -85,6 +85,11 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
+enum SpotKind {
+  WATER_BODY
+  ACCESS_ZONE
+}
+
 model Spot {
   id             String       @id @default(cuid())
   slug           String       @unique
@@ -149,6 +154,13 @@ model Spot {
   accessType         AccessType?
   accessDetails      Json?
 
+  // Modèle 3 niveaux : plan d'eau public (WATER_BODY) vs zone d'accès public (ACCESS_ZONE).
+  // Une zone d'accès pointe son plan d'eau parent ; le waypoint privé reste le modèle PrivateSpot.
+  kind           SpotKind     @default(WATER_BODY)
+  parentId       String?
+  parent         Spot?        @relation("SpotHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children       Spot[]       @relation("SpotHierarchy")
+
   @@index([department])
   @@index([waterType])
   @@index([status])
@@ -157,6 +169,9 @@ model Spot {
   @@index([dataOrigin])
   @@index([confidenceScore])
   @@index([accessType])
+  @@index([kind])
+  @@index([parentId])
+  @@index([status, kind, parentId])
   @@map("spots")
 }
 
