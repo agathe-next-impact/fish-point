@@ -29,6 +29,11 @@ export interface SavedSpotView {
   distance?: number;
   /** Collection (valeur `listName`) à laquelle ce spot appartient. */
   listName: string;
+  /**
+   * Note privée attachée au favori (serveur → la vraie note ; invité/local →
+   * toujours `null`, la note est réservée au compte). `null` = pas de note.
+   */
+  note: string | null;
   /** Provenance : sync multi-appareils (serveur) vs local seul (invité). */
   source: 'server' | 'local';
 }
@@ -37,6 +42,7 @@ export interface SavedSpotView {
 interface ServerFavorite {
   spotId: string;
   listName: string;
+  note: string | null;
   spot: {
     id: string;
     name: string;
@@ -64,6 +70,7 @@ async function fetchServerFavorites(): Promise<SavedSpotView[]> {
       department: fav.spot.department,
       waterType: fav.spot.waterType,
       listName: fav.listName && fav.listName.length > 0 ? fav.listName : DEFAULT_LIST_NAME,
+      note: fav.note ?? null,
       source: 'server' as const,
     }));
 }
@@ -80,6 +87,9 @@ function mapLocalRecords(records: SavedSpotRecord[]): SavedSpotView[] {
     // Le store invité n'a pas de collections serveur : tout retombe sur le défaut
     // (« Favoris »). La gestion fine des collections est réservée au compte.
     listName: DEFAULT_LIST_NAME,
+    // Les notes privées sont réservées au compte (persistance serveur) : l'invité
+    // ne porte jamais de note.
+    note: null,
     source: 'local' as const,
   }));
 }

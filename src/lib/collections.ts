@@ -20,6 +20,21 @@ export const DEFAULT_LIST_LABEL = 'Favoris';
 /** Longueur max d'un nom de collection (cohérente avec le schéma Zod de la route). */
 export const MAX_LIST_NAME_LENGTH = 60;
 
+/** Longueur max d'une note privée par spot enregistré (cohérente avec la route PATCH). */
+export const MAX_NOTE_LENGTH = 2000;
+
+/**
+ * Normalise une note privée saisie par l'utilisateur.
+ * Trim, tronque à {@link MAX_NOTE_LENGTH}. Une note vide (ou seulement des
+ * espaces) ou `null`/`undefined` retourne `null` : c'est l'effacement explicite
+ * de la note. Fonction pure (aucune dépendance React/serveur), testable.
+ */
+export function normalizeNote(raw: string | null | undefined): string | null {
+  if (raw == null) return null;
+  const cleaned = raw.trim().slice(0, MAX_NOTE_LENGTH);
+  return cleaned.length > 0 ? cleaned : null;
+}
+
 /**
  * Collections proposées au moment d'enregistrer. La 1re (`default`) est le
  * comportement 1-clic actuel ; les autres sont des valeurs `listName` libres.

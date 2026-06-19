@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
-import { DEFAULT_LIST_NAME, normalizeListName } from '@/lib/collections';
+import { DEFAULT_LIST_NAME, normalizeListName, normalizeNote } from '@/lib/collections';
 
 /**
  * Frontière favoris. `listName` porte les collections au niveau data (cf.
@@ -24,6 +24,22 @@ const saveFavoriteSchema = z.object({
 const removeFavoriteSchema = z.object({
   spotId: z.string().min(1),
   listName: listNameSchema,
+});
+
+/**
+ * Mise à jour de la note privée d'un favori. `note` accepte chaîne ou `null` ;
+ * la normalisation (trim, troncature, `''`/espaces → `null`) est portée par
+ * `normalizeNote` — unique autorité, on n'échoue jamais sur la longueur, on tronque.
+ * `null`/'' efface la note. Portée serveur uniquement (compte requis).
+ */
+const updateNoteSchema = z.object({
+  spotId: z.string().min(1),
+  listName: listNameSchema,
+  note: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((value) => normalizeNote(value)),
 });
 
 export async function GET() {
@@ -101,6 +117,45 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data: favorite }, { status: 201 });
   } catch (error) {
     console.error('POST /api/spots/favorites error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+/**
+ * Met à jour la note privée d'un spot enregistré. Upsert sur la clé
+ * [userId, spotId, listName] : si le favori existe on met à jour sa note, sinon
+ * on le crée avec la note (cohérent avec POST, qui est lui aussi un upsert).
+ * `note: null`/'' efface la note.
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const validation = updateNoteSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Validation error', details: validation.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
+
+    const { spotId, listName, note } = validation.data;
+
+    const favorite = await prisma.favorite.upsert({
+      where: {
+        userId_spotId_listName: { userId: session.user.id, spotId, listName },
+      },
+      create: { userId: session.user.id, spotId, listName, note },
+      update: { note },
+    });
+
+    return NextResponse.json({ data: favorite });
+  } catch (error) {
+    console.error('PATCH /api/spots/favorites error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

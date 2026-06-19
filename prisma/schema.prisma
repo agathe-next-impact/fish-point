@@ -299,6 +299,7 @@ model Favorite {
   spotId    String
   spot      Spot     @relation(fields: [spotId], references: [id])
   createdAt DateTime @default(now())
+  note      String?  @db.Text
 
   @@unique([userId, spotId, listName])
   @@index([spotId])

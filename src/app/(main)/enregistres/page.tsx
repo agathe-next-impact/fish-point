@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useId, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { Bookmark, List, Map as MapIcon, MapPin, Navigation, Route, LocateFixed, Loader2 } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Bookmark, List, Map as MapIcon, MapPin, Navigation, Route, LocateFixed, Loader2, NotebookPen, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGeolocation } from '@/hooks/useGeolocation';
@@ -13,7 +14,7 @@ import { formatDistance } from '@/lib/map';
 import { WATER_TYPE_LABELS } from '@/lib/constants';
 import { getDepartmentName } from '@/config/departments';
 import { formatSpotName } from '@/lib/spot-name';
-import { deriveCollections } from '@/lib/collections';
+import { deriveCollections, normalizeNote, MAX_NOTE_LENGTH } from '@/lib/collections';
 
 /** Vue de l'espace Enregistrés : état LOCAL, indépendant du store Explorer. */
 type SavedView = 'list' | 'map';
@@ -174,7 +175,7 @@ export default function SavedSpotsPage() {
           ) : (
             <ul className="grid gap-3">
               {visibleSpots.map((spot) => (
-                <SavedSpotRow key={spot.spotId} spot={spot} />
+                <SavedSpotRow key={spot.spotId} spot={spot} isGuest={isGuest} />
               ))}
             </ul>
           )}
@@ -184,7 +185,7 @@ export default function SavedSpotsPage() {
   );
 }
 
-function SavedSpotRow({ spot }: { spot: SavedSpotView }) {
+function SavedSpotRow({ spot, isGuest }: { spot: SavedSpotView; isGuest: boolean }) {
   const displayName = formatSpotName({
     name: spot.name,
     commune: null,
@@ -192,45 +193,164 @@ function SavedSpotRow({ spot }: { spot: SavedSpotView }) {
   });
 
   return (
-    <li className="relative flex items-center gap-3 rounded-fs-lg border border-line bg-card p-3 shadow-fs-sm">
-      <Link
-        href={`/spots/${spot.slug}`}
-        aria-label={`Voir la fiche : ${displayName}`}
-        className="min-w-0 flex-1 rounded-fs-md after:absolute after:inset-0 after:z-0 after:content-[''] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      >
-        <h2 className="fs-dsp truncate text-[16px] font-bold text-ink">{displayName}</h2>
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fs-muted">
-          {spot.department && (
-            <span className="flex items-center gap-1">
-              <MapPin className="h-3.5 w-3.5 shrink-0" strokeWidth={1.9} aria-hidden />
-              {getDepartmentName(spot.department)}
-            </span>
-          )}
-          {spot.waterType && (
-            <span className="rounded-full bg-aqua-soft px-2 py-0.5 text-xs font-semibold text-teal-deep">
-              {WATER_TYPE_LABELS[spot.waterType] ?? spot.waterType}
-            </span>
-          )}
-          {spot.distance !== undefined && (
-            <span className="flex items-center gap-1 text-xs">
-              <Navigation className="h-3 w-3" strokeWidth={1.9} aria-hidden />
-              {formatDistance(spot.distance)}
-            </span>
-          )}
-        </div>
-      </Link>
+    <li className="rounded-fs-lg border border-line bg-card p-3 shadow-fs-sm">
+      <div className="relative flex items-center gap-3">
+        <Link
+          href={`/spots/${spot.slug}`}
+          aria-label={`Voir la fiche : ${displayName}`}
+          className="min-w-0 flex-1 rounded-fs-md after:absolute after:inset-0 after:z-0 after:content-[''] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <h2 className="fs-dsp truncate text-[16px] font-bold text-ink">{displayName}</h2>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fs-muted">
+            {spot.department && (
+              <span className="flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5 shrink-0" strokeWidth={1.9} aria-hidden />
+                {getDepartmentName(spot.department)}
+              </span>
+            )}
+            {spot.waterType && (
+              <span className="rounded-full bg-aqua-soft px-2 py-0.5 text-xs font-semibold text-teal-deep">
+                {WATER_TYPE_LABELS[spot.waterType] ?? spot.waterType}
+              </span>
+            )}
+            {spot.distance !== undefined && (
+              <span className="flex items-center gap-1 text-xs">
+                <Navigation className="h-3 w-3" strokeWidth={1.9} aria-hidden />
+                {formatDistance(spot.distance)}
+              </span>
+            )}
+          </div>
+        </Link>
 
-      <a
-        href={buildDirectionsUrl(spot.latitude, spot.longitude)}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`Itinéraire vers ${displayName}`}
-        className="relative z-10 inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-semibold transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      >
-        <Navigation className="h-4 w-4" strokeWidth={1.9} aria-hidden />
-        <span className="hidden sm:inline">Itinéraire</span>
-      </a>
+        <a
+          href={buildDirectionsUrl(spot.latitude, spot.longitude)}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Itinéraire vers ${displayName}`}
+          className="relative z-10 inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-semibold transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <Navigation className="h-4 w-4" strokeWidth={1.9} aria-hidden />
+          <span className="hidden sm:inline">Itinéraire</span>
+        </a>
+      </div>
+
+      {isGuest ? (
+        <p className="mt-2 text-xs text-fs-muted">
+          <NotebookPen className="mr-1 inline-block h-3.5 w-3.5 align-text-bottom" strokeWidth={1.9} aria-hidden />
+          <Link href="/login" className="font-semibold text-fs-accent underline">
+            Connectez-vous
+          </Link>{' '}
+          pour ajouter une note privée à ce spot.
+        </p>
+      ) : (
+        <SavedSpotNote spot={spot} displayName={displayName} />
+      )}
     </li>
+  );
+}
+
+/**
+ * Note privée éditable d'un spot enregistré (connecté uniquement). Affichage
+ * replié par défaut : un bouton « Ajouter une note » ou l'aperçu de la note
+ * existante ouvre un `<textarea>` labellisé. Persistance via PATCH
+ * /api/spots/favorites (clé [userId, spotId, listName]) à la validation
+ * explicite ou au blur si le texte a changé, puis invalidation de
+ * `['saved-spots','server']` pour rafraîchir l'affichage. La note est tronquée /
+ * effacée côté serveur via `normalizeNote` ; on applique la même normalisation
+ * ici pour ne pas envoyer de PATCH inutile quand rien n'a changé.
+ */
+function SavedSpotNote({ spot, displayName }: { spot: SavedSpotView; displayName: string }) {
+  const queryClient = useQueryClient();
+  const textareaId = useId();
+  const savedNote = spot.note ?? '';
+
+  // Édition ouverte d'emblée s'il existe déjà une note, sinon repliée derrière le
+  // bouton « Ajouter une note ».
+  const [isEditing, setIsEditing] = useState(savedNote.length > 0);
+  const [draft, setDraft] = useState(savedNote);
+  const [justSaved, setJustSaved] = useState(false);
+
+  const mutation = useMutation({
+    mutationFn: async (note: string | null) => {
+      const res = await fetch('/api/spots/favorites', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ spotId: spot.spotId, listName: spot.listName, note }),
+      });
+      if (!res.ok) throw new Error('Échec de l’enregistrement de la note');
+      return res.json();
+    },
+    onSuccess: () => {
+      setJustSaved(true);
+      queryClient.invalidateQueries({ queryKey: ['saved-spots', 'server'] });
+    },
+  });
+
+  const save = () => {
+    const next = normalizeNote(draft);
+    // Rien à enregistrer si la note normalisée est identique à celle persistée.
+    if ((next ?? '') === savedNote) return;
+    mutation.mutate(next);
+  };
+
+  if (!isEditing) {
+    return (
+      <button
+        type="button"
+        onClick={() => setIsEditing(true)}
+        className="relative z-10 mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-fs-accent transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        <NotebookPen className="h-4 w-4" strokeWidth={1.9} aria-hidden />
+        Ajouter une note
+      </button>
+    );
+  }
+
+  return (
+    <div className="relative z-10 mt-2">
+      <label htmlFor={textareaId} className="mb-1 block text-xs font-semibold text-fs-muted">
+        Note privée — {displayName}
+      </label>
+      <textarea
+        id={textareaId}
+        name={`note-${spot.spotId}`}
+        value={draft}
+        maxLength={MAX_NOTE_LENGTH}
+        rows={2}
+        onChange={(event) => {
+          setDraft(event.target.value);
+          if (justSaved) setJustSaved(false);
+        }}
+        onBlur={save}
+        placeholder="Accès, parking, leurres qui marchent…"
+        className="w-full resize-y rounded-fs-md border border-line bg-background px-3 py-2 text-sm text-ink placeholder:text-fs-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+      />
+      <div className="mt-1.5 flex items-center gap-3">
+        <Button
+          type="button"
+          size="sm"
+          onClick={save}
+          disabled={mutation.isPending || (normalizeNote(draft) ?? '') === savedNote}
+        >
+          {mutation.isPending ? (
+            <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden />
+          ) : (
+            <Check className="mr-1.5 h-4 w-4" aria-hidden />
+          )}
+          Enregistrer la note
+        </Button>
+        {justSaved && !mutation.isPending && (
+          <span className="text-xs font-semibold text-teal-deep" role="status">
+            Note enregistrée
+          </span>
+        )}
+        {mutation.isError && (
+          <span className="text-xs font-semibold text-red-600" role="alert">
+            Échec — réessayez
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 
