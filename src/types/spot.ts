@@ -1,6 +1,6 @@
-import type { WaterType, WaterCategory, FishingType, SpotStatus, Abundance, AccessType } from '@prisma/client';
+import type { WaterType, WaterCategory, FishingType, SpotStatus, Abundance, AccessType, SpotKind } from '@prisma/client';
 
-export type { WaterType, WaterCategory, FishingType, SpotStatus, Abundance, AccessType };
+export type { WaterType, WaterCategory, FishingType, SpotStatus, Abundance, AccessType, SpotKind };
 
 export interface SpotAccessibility {
   pmr: boolean;
@@ -30,6 +30,14 @@ export interface SpotListItem {
   fishabilityScore: number | null;
   dataOrigin: string;
   accessType: AccessType | null;
+  /**
+   * Niveau du spot (modèle 3 niveaux) : `WATER_BODY` = plan d'eau public,
+   * `ACCESS_ZONE` = zone/accès public rattaché à un plan d'eau parent. Lecture passive
+   * (slice 1) : aucun filtre par défaut ni affichage ne le consomme encore. `parentId`
+   * pointe vers le plan d'eau parent d'une `ACCESS_ZONE` (null pour un `WATER_BODY`).
+   */
+  kind: SpotKind;
+  parentId: string | null;
   /**
    * Espèces documentées du spot (jointure légère `speciesId`+`abundance`, ajoutée au
    * `spotListSelect`). Sert au verdict « Adapté à votre sortie » par item de liste

@@ -17,6 +17,9 @@ export const spotListSelect = {
   fishabilityScore: true,
   dataOrigin: true,
   accessType: true,
+  // Modèle 3 niveaux (lecture passive, slice 1) : exposés sans filtre par défaut.
+  kind: true,
+  parentId: true,
   images: {
     where: { isPrimary: true },
     select: { url: true },

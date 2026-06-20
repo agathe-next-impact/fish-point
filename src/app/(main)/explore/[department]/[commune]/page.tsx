@@ -31,6 +31,7 @@ export default async function CommunePage({ params }: CommunePageProps) {
     reviewCount: s.reviewCount, isPremium: s.isPremium,
     isVerified: s.isVerified, primaryImage: s.images[0]?.url || null,
     fishabilityScore: s.fishabilityScore, dataOrigin: s.dataOrigin, accessType: s.accessType,
+    kind: s.kind, parentId: s.parentId,
   }));
 
   return (

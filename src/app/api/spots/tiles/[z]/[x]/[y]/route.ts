@@ -76,7 +76,9 @@ export async function GET(
           s."isVerified",
           s."fishabilityScore",
           s."dataOrigin"::text AS "dataOrigin",
-          s."accessType"::text AS "accessType"
+          s."accessType"::text AS "accessType",
+          s."kind"::text AS "kind",
+          s."parentId"
         FROM "spots" s, bounds
         WHERE s."status" = ${'APPROVED'}::"SpotStatus"
           AND ST_Intersects(s."geometry", ST_Transform(bounds.geom, 4326)::geography)

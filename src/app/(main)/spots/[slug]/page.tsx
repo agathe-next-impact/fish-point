@@ -53,6 +53,8 @@ export default async function SpotPage({ params }: SpotPageProps) {
     fishabilityScore: spot.fishabilityScore ?? null,
     dataOrigin: spot.dataOrigin,
     accessType: spot.accessType,
+    kind: spot.kind,
+    parentId: spot.parentId,
     accessibility: spot.accessibility as SpotDetailType['accessibility'],
     accessDetails: spot.accessDetails as SpotDetailType['accessDetails'],
     status: spot.status,

@@ -70,6 +70,8 @@ export async function GET(request: NextRequest) {
           s."fishabilityScore",
           s."dataOrigin",
           s."accessType",
+          s."kind",
+          s."parentId",
           img."url" AS "primaryImage"
         FROM "spots" s
         LEFT JOIN LATERAL (
