@@ -26,6 +26,15 @@ export default async function SpotPage({ params }: SpotPageProps) {
       species: { include: { species: true } },
       regulations: { where: { isActive: true } },
       _count: { select: { speciesObservations: true, waterQualityData: true } },
+      // Modèle 3 niveaux : plan d'eau parent (si ce spot est une zone d'accès) +
+      // zones d'accès enfants approuvées (si ce spot est un plan d'eau).
+      parent: { select: { id: true, slug: true, name: true } },
+      children: {
+        where: { kind: 'ACCESS_ZONE', status: 'APPROVED' },
+        select: { id: true, slug: true, name: true, latitude: true, longitude: true, accessType: true },
+        orderBy: { name: 'asc' },
+        take: 50,
+      },
     },
   });
 
@@ -99,9 +108,26 @@ export default async function SpotPage({ params }: SpotPageProps) {
     hasObservations: spot._count.speciesObservations > 0,
   };
 
+  // Modèle 3 niveaux : un accès affiche son plan d'eau parent ; un plan d'eau liste ses
+  // accès enfants. Les deux relations sont mutuellement exclusives par construction.
+  const parentWaterBody = spot.kind === 'ACCESS_ZONE' ? spot.parent : null;
+  const accessZones = spot.children.map((c) => ({
+    id: c.id,
+    slug: c.slug,
+    name: c.name,
+    latitude: c.latitude,
+    longitude: c.longitude,
+    accessType: c.accessType,
+  }));
+
   return (
     <div className="container mx-auto px-4 py-6">
-      <SpotDetail spot={spotData} reliability={reliabilitySignals} />
+      <SpotDetail
+        spot={spotData}
+        reliability={reliabilitySignals}
+        accessZones={accessZones}
+        parentWaterBody={parentWaterBody}
+      />
     </div>
   );
 }

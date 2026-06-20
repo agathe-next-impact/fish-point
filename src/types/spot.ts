@@ -77,6 +77,26 @@ export interface SpotDetail extends SpotListItem {
   regulations: SpotRegulationData[];
 }
 
+/**
+ * Résumé d'une zone d'accès public (modèle 3 niveaux) listée sur la fiche de son plan
+ * d'eau parent (bloc « Accès publics »). Forme d'affichage légère, pas la fiche complète.
+ */
+export interface SpotAccessZoneSummary {
+  id: string;
+  slug: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  accessType: AccessType | null;
+}
+
+/** Résumé du plan d'eau parent, pour le bandeau « Cet accès appartient à … ». */
+export interface SpotParentSummary {
+  id: string;
+  slug: string;
+  name: string;
+}
+
 export interface SpotImageData {
   id: string;
   url: string;

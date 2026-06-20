@@ -24,6 +24,7 @@ import {
   SpotLayer,
   type SelectedTileSpot,
 } from './SpotLayer';
+import { AccessZoneLayer, ACCESS_ZONE_LAYER_ID } from './AccessZoneLayer';
 import { MapControls } from './MapControls';
 import { UserLocation } from './UserLocation';
 import { HeatmapLayer } from './HeatmapLayer';
@@ -103,6 +104,14 @@ export function MapContainer({
     return `${origin}/api/spots/tiles/{z}/{x}/{y}.mvt${suffix}`;
   }, [activeFilters]);
 
+  // Modèle 3 niveaux : tuiles dédiées aux zones d'accès (sous-couche fort zoom). On force
+  // `kind=ACCESS_ZONE` (les autres filtres « sortie » ciblent les plans d'eau). URL stable.
+  const accessTileUrl = useMemo(() => {
+    const params = serializeSpotFilters({ kind: ['ACCESS_ZONE'] });
+    const origin = typeof window === 'undefined' ? '' : window.location.origin;
+    return `${origin}/api/spots/tiles/{z}/{x}/{y}.mvt?${params}`;
+  }, []);
+
   const handleStyleChange = useCallback((next: MapStyleKey) => {
     setStyleKey(next);
   }, []);
@@ -131,7 +140,7 @@ export function MapContainer({
   }, [onBoundsChange, setViewport]);
 
   const interactiveLayerIds = activeLayers.includes('spots')
-    ? [UNCLUSTERED_LAYER_ID, UNCLUSTERED_SCORE_LAYER_ID]
+    ? [UNCLUSTERED_LAYER_ID, UNCLUSTERED_SCORE_LAYER_ID, ACCESS_ZONE_LAYER_ID]
     : [];
 
   const handleMapClick = useCallback((event: MapLayerMouseEvent) => {
@@ -142,7 +151,14 @@ export function MapContainer({
     }
 
     const [longitude, latitude] = event.lngLat.toArray();
-    if (feature.layer.id === UNCLUSTERED_LAYER_ID || feature.layer.id === UNCLUSTERED_SCORE_LAYER_ID) {
+    // Plans d'eau ET zones d'accès partagent le même popup : leurs tuiles portent les
+    // mêmes propriétés (id/slug/name/waterType/score). Le lien « Voir la fiche » mène à
+    // la fiche de l'accès, qui affiche elle-même son plan d'eau parent.
+    if (
+      feature.layer.id === UNCLUSTERED_LAYER_ID ||
+      feature.layer.id === UNCLUSTERED_SCORE_LAYER_ID ||
+      feature.layer.id === ACCESS_ZONE_LAYER_ID
+    ) {
       const properties = feature.properties;
       if (typeof properties?.id === 'string') {
         setSelectedSpot({
@@ -187,12 +203,16 @@ export function MapContainer({
         />
 
         {activeLayers.includes('spots') && (
-          <SpotLayer
-            tileUrl={spotTileUrl}
-            selectedSpot={selectedSpot}
-            onClosePopup={() => setSelectedSpot(null)}
-            tripQuery={tripQuery}
-          />
+          <>
+            <SpotLayer
+              tileUrl={spotTileUrl}
+              selectedSpot={selectedSpot}
+              onClosePopup={() => setSelectedSpot(null)}
+              tripQuery={tripQuery}
+            />
+            {/* Sous-couche « accès publics » (modèle 3 niveaux), fort zoom seulement. */}
+            <AccessZoneLayer tileUrl={accessTileUrl} />
+          </>
         )}
 
         {/* `spots` (bbox) est déjà filtré côté serveur avec le même jeu que les tuiles

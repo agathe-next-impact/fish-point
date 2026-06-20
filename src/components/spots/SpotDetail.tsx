@@ -1,6 +1,7 @@
 'use client';
 
-import { MapPin, Check, Navigation, Eye, Database, Accessibility, ParkingCircle, Ship, Moon } from 'lucide-react';
+import Link from 'next/link';
+import { MapPin, Check, Navigation, Eye, Database, Accessibility, ParkingCircle, Ship, Moon, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { AccessTag } from '@/components/ui/access-tag';
 import { SaveSpotButton } from './SaveSpotButton';
@@ -27,7 +28,8 @@ import { SpotDroughtBanner } from './SpotDroughtBanner';
 import { SpotProtectedZones } from './SpotProtectedZones';
 import { SpotReviews } from './SpotReviews';
 import { SpotGallery } from './SpotGallery';
-import type { SpotDetail as SpotDetailType } from '@/types/spot';
+import { SpotAccessZones } from './SpotAccessZones';
+import type { SpotDetail as SpotDetailType, SpotAccessZoneSummary, SpotParentSummary } from '@/types/spot';
 
 interface ReliabilitySignals {
   accessConfidence: number | null;
@@ -41,13 +43,28 @@ interface ReliabilitySignals {
 interface SpotDetailProps {
   spot: SpotDetailType;
   reliability: ReliabilitySignals;
+  /** Zones d'accès rattachées (si ce spot est un plan d'eau). Modèle 3 niveaux. */
+  accessZones?: SpotAccessZoneSummary[];
+  /** Plan d'eau parent (si ce spot est une zone d'accès). Modèle 3 niveaux. */
+  parentWaterBody?: SpotParentSummary | null;
 }
 
-export function SpotDetail({ spot, reliability }: SpotDetailProps) {
+export function SpotDetail({ spot, reliability, accessZones = [], parentWaterBody = null }: SpotDetailProps) {
   const displayName = formatSpotName({ name: spot.name, commune: spot.commune, waterType: spot.waterType });
 
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Modèle 3 niveaux : bandeau de rattachement d'une zone d'accès à son plan d'eau */}
+      {parentWaterBody && (
+        <Link
+          href={`/spots/${parentWaterBody.slug}`}
+          className="mb-4 flex items-center gap-2 rounded-fs-lg border border-line bg-aqua-soft px-4 py-3 text-sm font-medium text-teal-deep transition-colors hover:border-primary"
+        >
+          <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+          <span>Cet accès appartient à <strong>{parentWaterBody.name}</strong></span>
+        </Link>
+      )}
+
       {/* Drought restriction banner (go/no-go) */}
       <SpotDroughtBanner spotId={spot.id} />
 
@@ -175,6 +192,10 @@ export function SpotDetail({ spot, reliability }: SpotDetailProps) {
               </div>
             </section>
           )}
+
+          {/* Modèle 3 niveaux : accès publics rattachés (présent uniquement si ce spot
+              est un plan d'eau ayant des zones d'accès enfants). */}
+          <SpotAccessZones accessZones={accessZones} />
 
           <SpotTopSpecies species={spot.species} />
 
