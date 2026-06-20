@@ -32,7 +32,8 @@ points d'accès utiles **sans révéler les coins précis** des pêcheurs :
 
 ## AVANCEMENT
 - ✅ **Slice 0 — migration additive (commit `a89b3b1`)** : `enum SpotKind`, `Spot.kind` (NOT NULL DEFAULT WATER_BODY), `Spot.parentId`, relation self `SpotHierarchy`, index `kind`/`parentId`/`status,kind,parentId`, FK `spots_parentId_fkey`. Appliquée à la prod Neon via `prisma db execute` (fichier `prisma/migrations/20260619140000_add_spot_kind_hierarchy/migration.sql`). Vérifié : 53 738 spots = WATER_BODY, colonnes/index/FK présents. `prisma generate` + `tsc` OK. **No-op fonctionnel** (aucun code ne lit `kind`).
-- ⏳ **Slices 1→6 — à faire** (détail ci-dessous).
+- ✅ **Slice 1 — types & lecture passive (commit `4f34501`)** : `kind: SpotKind` + `parentId: string | null` ajoutés à `SpotListItem` (hérité par `SpotDetail`), `spotListSelect` (`kind/parentId: true`), et les SELECT raw PostGIS tuiles (`s."kind"::text`, `s."parentId"`) + bbox. `tsc` a aussi forcé 3 constructions manuelles de `SpotListItem`/`SpotDetail` à projeter les champs : fiche `spots/[slug]/page.tsx` + 2 pages SEO `explore/[department]/(page|[commune]/page).tsx`. **7 fichiers**, aucun filtre par défaut ni UI. Vérifié : `tsc` 0, eslint 0 (1 warning pré-existant `DEPARTMENTS`), vitest 257✓, + runtime Neon (SELECT typé + raw OK, 53 738 = WATER_BODY / 0 ACCESS_ZONE → no-op).
+- ⏳ **Slices 2→6 — à faire** (détail ci-dessous). **Prochaine = slice 2** (filtre `kind` + défaut WATER_BODY dans `spot-filter-params`/`spot-where`/`spot-where-sql`/`spot.schema` + filtre SEO `explore/*`+`sitemap.ts`).
 
 ## SLICES RESTANTES (rétro-compatibles, ≤ ~6 fichiers chacune, zéro régression)
 
