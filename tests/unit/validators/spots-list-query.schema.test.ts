@@ -85,6 +85,25 @@ describe('spotsListQuerySchema', () => {
     expect(q.west).toBe(2);
   });
 
+  it('defaults kind to an empty array (default WATER_BODY applied downstream)', () => {
+    const result = spotsListQuerySchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.kind).toEqual([]);
+  });
+
+  it('accepts explicit kind values', () => {
+    const result = spotsListQuerySchema.safeParse({ kind: ['ACCESS_ZONE'] });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.kind).toEqual(['ACCESS_ZONE']);
+  });
+
+  it('rejects an unknown kind enum value', () => {
+    const result = spotsListQuerySchema.safeParse({ kind: ['NOPE'] });
+    expect(result.success).toBe(false);
+  });
+
   it('rejects an unknown waterType enum value', () => {
     const result = spotsListQuerySchema.safeParse({ waterType: ['OCEAN'] });
     expect(result.success).toBe(false);
@@ -130,6 +149,7 @@ describe('toSpotQueryFilters', () => {
   it('maps empty arrays to undefined and omits geo/pagination concerns', () => {
     const q = spotsListQuerySchema.parse({});
     const filters = toSpotQueryFilters(q);
+    expect(filters.kind).toBeUndefined();
     expect(filters.waterType).toBeUndefined();
     expect(filters.fishCategory).toBeUndefined();
     expect(filters.species).toBeUndefined();

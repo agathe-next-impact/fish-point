@@ -142,6 +142,33 @@ describe('round-trip serialize → parse (liste et carte parlent le même vocabu
   });
 });
 
+describe('kind (modèle 3 niveaux) — vocabulaire partagé liste/carte', () => {
+  it('sérialise kind en params répétés', () => {
+    const params = serializeSpotFilters({ kind: ['WATER_BODY', 'ACCESS_ZONE'] });
+    expect(params.getAll('kind')).toEqual(['WATER_BODY', 'ACCESS_ZONE']);
+  });
+
+  it('kind absent → aucun param (le défaut WATER_BODY est appliqué côté builder, pas ici)', () => {
+    expect(serializeSpotFilters({}).get('kind')).toBeNull();
+  });
+
+  it('parse filtre les valeurs inconnues (anti-injection) et garde les niveaux connus', () => {
+    const params = new URLSearchParams();
+    params.append('kind', 'ACCESS_ZONE');
+    params.append('kind', 'NOPE');
+    expect(parseSpotFilterParams(params).kind).toEqual(['ACCESS_ZONE']);
+  });
+
+  it('absence de kind → undefined (pas de tableau vide qui fausserait un .length > 0)', () => {
+    expect(parseSpotFilterParams(new URLSearchParams()).kind).toBeUndefined();
+  });
+
+  it('round-trip serialize → parse préserve un kind explicite', () => {
+    const filters: SpotQueryFilters = { kind: ['ACCESS_ZONE'] };
+    expect(parseSpotFilterParams(serializeSpotFilters(filters))).toEqual(filters);
+  });
+});
+
 describe('absorption des filtres exclusifs carte (ancien overlay MapFilters → FilterRail)', () => {
   // Contrat critique de la sous-étape 4 : `premiumOnly` et `showAutoDiscovered` ont migré
   // de l'overlay supprimé vers le contrôle unique FilterRail. Ils doivent se sérialiser

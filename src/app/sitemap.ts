@@ -27,7 +27,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let spotPages: MetadataRoute.Sitemap = [];
   try {
     const spots = await prisma.spot.findMany({
-      where: { status: 'APPROVED' },
+      // SEO : ne référencer que les plans d'eau (modèle 3 niveaux) — pas les zones
+      // d'accès, qui s'affichent sur la fiche du plan d'eau parent (pas d'URL propre).
+      where: { status: 'APPROVED', kind: 'WATER_BODY' },
       select: { slug: true, updatedAt: true },
       orderBy: { updatedAt: 'desc' },
       take: 5000,

@@ -24,7 +24,8 @@ export default async function DepartmentPage({ params }: DepartmentPageProps) {
   if (!dept) notFound();
 
   const spots = await prisma.spot.findMany({
-    where: { department, status: 'APPROVED' },
+    // SEO : ne lister que les plans d'eau (modèle 3 niveaux) — pas les zones d'accès.
+    where: { department, status: 'APPROVED', kind: 'WATER_BODY' },
     include: { images: { where: { isPrimary: true }, take: 1 } },
     orderBy: { averageRating: 'desc' },
     take: 50,

@@ -31,11 +31,26 @@ const MODE_SET = new Set<string>(FISHING_MODE_TYPES);
 const TECHNIQUE_SET = new Set<string>(FISHING_TECHNIQUE_TYPES);
 
 /**
+ * Niveaux de spot connus (modèle 3 niveaux). Sert au filtrage défensif du param `kind`
+ * au parsing (écarte toute valeur arbitraire avant la requête SQL). Aligné sur l'enum
+ * Prisma `SpotKind` et sur `SpotKindEnum` (Zod, `spot.schema.ts`).
+ */
+const SPOT_KINDS = ['WATER_BODY', 'ACCESS_ZONE'] as const;
+const KIND_SET = new Set<string>(SPOT_KINDS);
+
+/**
  * Forme canonique des filtres « spot » consommée par la liste ET la carte. C'est le
  * sous-ensemble partagé : les bornes géo (north/south/east/west) et la pagination
  * restent propres à chaque chemin (la carte borne via la tuile, la liste via la bbox).
  */
 export interface SpotQueryFilters {
+  /**
+   * Niveau(x) de spot demandé(s) (modèle 3 niveaux). Absent ⇒ les builders
+   * (`buildSpotWhere` / `buildSpotFilterSql`) appliquent le défaut WATER_BODY :
+   * la liste et la carte ne montrent que les plans d'eau. Une valeur explicite
+   * (`['ACCESS_ZONE']`, ou les deux) REMPLACE le défaut.
+   */
+  kind?: string[];
   waterType?: string[];
   waterCategory?: string;
   fishCategory?: string[];
@@ -74,6 +89,7 @@ export interface SpotQueryFilters {
 export function serializeSpotFilters(filters: SpotQueryFilters): URLSearchParams {
   const params = new URLSearchParams();
 
+  for (const k of filters.kind ?? []) params.append('kind', k);
   for (const type of filters.waterType ?? []) params.append('waterType', type);
   for (const cat of filters.fishCategory ?? []) params.append('fishCategory', cat);
   for (const id of filters.species ?? []) params.append('species', id);
@@ -121,6 +137,7 @@ function parseNumber(value: string | null): number | undefined {
  * pour éviter qu'une valeur arbitraire ne fuite dans la requête SQL des tuiles.
  */
 export function parseSpotFilterParams(searchParams: URLSearchParams): SpotQueryFilters {
+  const kind = searchParams.getAll('kind').filter((k) => KIND_SET.has(k));
   const waterType = searchParams.getAll('waterType').filter(Boolean);
   const fishCategory = searchParams.getAll('fishCategory').filter(Boolean);
   const species = searchParams.getAll('species').filter(Boolean);
@@ -130,6 +147,7 @@ export function parseSpotFilterParams(searchParams: URLSearchParams): SpotQueryF
     .filter((t) => TECHNIQUE_SET.has(t));
 
   return {
+    kind: kind.length > 0 ? kind : undefined,
     waterType: waterType.length > 0 ? waterType : undefined,
     fishCategory: fishCategory.length > 0 ? fishCategory : undefined,
     species: species.length > 0 ? species : undefined,

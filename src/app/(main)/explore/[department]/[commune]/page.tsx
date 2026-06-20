@@ -17,7 +17,8 @@ export default async function CommunePage({ params }: CommunePageProps) {
   const communeName = decodeURIComponent(commune);
 
   const spots = await prisma.spot.findMany({
-    where: { department, commune: communeName, status: 'APPROVED' },
+    // SEO : ne lister que les plans d'eau (modèle 3 niveaux) — pas les zones d'accès.
+    where: { department, commune: communeName, status: 'APPROVED', kind: 'WATER_BODY' },
     include: { images: { where: { isPrimary: true }, take: 1 } },
     orderBy: { averageRating: 'desc' },
   });

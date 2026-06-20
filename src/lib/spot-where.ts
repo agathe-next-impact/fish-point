@@ -27,6 +27,7 @@ import type {
   AccessType,
   FishCategory,
   FishingType,
+  SpotKind,
 } from '@prisma/client';
 import type { SpotQueryFilters } from '@/lib/spot-filter-params';
 import { splitFishingTypes, activeAccessibilityFlags } from '@/lib/spot-filter-params';
@@ -45,6 +46,13 @@ export function buildSpotWhere(filters: SpotQueryFilters): Prisma.SpotWhereInput
   // Conditions AND combinables (FREE, relation species, fishingTypes, accessibilité) :
   // regroupées ici pour ne pas s'écraser entre elles ni écraser `OR` (search).
   const and: Prisma.SpotWhereInput[] = [];
+
+  // Modèle 3 niveaux : par défaut la liste/carte ne montrent que les plans d'eau
+  // (WATER_BODY). Une zone d'accès (ACCESS_ZONE) n'apparaît que si explicitement
+  // demandée via `kind` — une valeur explicite REMPLACE le défaut (pas de cumul).
+  // Clé scalaire de premier niveau, sans collision avec `OR`/`AND`.
+  const kinds = filters.kind && filters.kind.length > 0 ? filters.kind : ['WATER_BODY'];
+  where.kind = { in: kinds as SpotKind[] };
 
   if (filters.department) {
     where.department = filters.department;

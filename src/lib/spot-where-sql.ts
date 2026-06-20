@@ -133,5 +133,12 @@ export function buildSpotFilterSql(searchParams: URLSearchParams): Prisma.Sql[] 
     filters.push(Prisma.sql`s."isPremium" = true`);
   }
 
+  // Modèle 3 niveaux : défaut = plans d'eau (WATER_BODY) ; une ACCESS_ZONE n'apparaît
+  // que si explicitement demandée via `kind` (la valeur explicite REMPLACE le défaut).
+  // MÊME politique que `buildSpotWhere` (parité liste ↔ carte). Ajouté en dernier pour
+  // ne pas décaler l'ordre des autres fragments. Valeurs paramétrées (anti-injection).
+  const kinds = shared.kind && shared.kind.length > 0 ? shared.kind : ['WATER_BODY'];
+  filters.push(Prisma.sql`s."kind"::text IN (${Prisma.join(kinds)})`);
+
   return filters;
 }

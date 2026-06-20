@@ -11,6 +11,9 @@ export const WaterTypeEnum = z.enum([
 
 export const WaterCategoryEnum = z.enum(['FIRST', 'SECOND']);
 
+/** Niveau de spot (modèle 3 niveaux) — aligné sur l'enum Prisma `SpotKind`. */
+export const SpotKindEnum = z.enum(['WATER_BODY', 'ACCESS_ZONE']);
+
 export const FishingTypeEnum = z.enum([
   'SPINNING', 'FLY', 'COARSE', 'CARP', 'SURFCASTING',
   'TROLLING', 'FLOAT_TUBE', 'BOAT', 'SHORE',
@@ -124,6 +127,9 @@ export const spotsListQuerySchema = z.object({
   page: numeric(z.number().int().min(1)).optional().default(1),
   limit: numeric(z.number().int().min(1).max(100)).optional().default(20),
   department: z.string().min(1).optional(),
+  // Modèle 3 niveaux : absent ⇒ défaut WATER_BODY appliqué par `buildSpotWhere`
+  // (la liste ne montre que les plans d'eau). Une valeur explicite remplace le défaut.
+  kind: z.array(SpotKindEnum).default([]),
   waterType: z.array(WaterTypeEnum).default([]),
   waterCategory: WaterCategoryEnum.optional(),
   fishCategory: z.array(FishCategoryEnum).default([]),
@@ -166,6 +172,7 @@ export type SpotsListQuery = z.infer<typeof spotsListQuerySchema>;
 export function toSpotQueryFilters(q: SpotsListQuery): SpotQueryFilters {
   return {
     department: q.department,
+    kind: q.kind.length > 0 ? q.kind : undefined,
     waterType: q.waterType.length > 0 ? q.waterType : undefined,
     waterCategory: q.waterCategory,
     fishCategory: q.fishCategory.length > 0 ? q.fishCategory : undefined,

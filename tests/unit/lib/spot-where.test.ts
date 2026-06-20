@@ -11,19 +11,37 @@ import type { SpotQueryFilters } from '@/lib/spot-filter-params';
  */
 
 describe('buildSpotWhere', () => {
-  it('filtres vides → objet where minimal (pas de AND, pas de clés parasites)', () => {
-    expect(buildSpotWhere({})).toEqual({});
+  it('filtres vides → défaut WATER_BODY seul (pas de AND, pas de clés parasites)', () => {
+    expect(buildSpotWhere({})).toEqual({ kind: { in: ['WATER_BODY'] } });
   });
 
-  it('listes vides explicites → ignorées (gardes length > 0), where minimal', () => {
+  it('listes vides explicites → ignorées (gardes length > 0), défaut WATER_BODY seul', () => {
     const filters: SpotQueryFilters = {
+      kind: [],
       waterType: [],
       fishCategory: [],
       species: [],
       fishingMode: [],
       fishingTechnique: [],
     };
-    expect(buildSpotWhere(filters)).toEqual({});
+    expect(buildSpotWhere(filters)).toEqual({ kind: { in: ['WATER_BODY'] } });
+  });
+
+  // ── Modèle 3 niveaux : défaut WATER_BODY + override explicite ──
+  it('kind absent → défaut WATER_BODY (clé scalaire de premier niveau, hors AND)', () => {
+    const where = buildSpotWhere({ department: '74' });
+    expect(where.kind).toEqual({ in: ['WATER_BODY'] });
+    expect(where.AND).toBeUndefined();
+  });
+
+  it('kind explicite ACCESS_ZONE → remplace le défaut (pas de cumul)', () => {
+    expect(buildSpotWhere({ kind: ['ACCESS_ZONE'] }).kind).toEqual({ in: ['ACCESS_ZONE'] });
+  });
+
+  it('kind explicite des deux niveaux → in [WATER_BODY, ACCESS_ZONE]', () => {
+    expect(buildSpotWhere({ kind: ['WATER_BODY', 'ACCESS_ZONE'] }).kind).toEqual({
+      in: ['WATER_BODY', 'ACCESS_ZONE'],
+    });
   });
 
   it('clés de premier niveau scalaires (department, waterType, waterCategory)', () => {
@@ -174,6 +192,7 @@ describe('buildSpotWhere', () => {
       nightFishing: true,
     };
     expect(buildSpotWhere(filters)).toEqual({
+      kind: { in: ['WATER_BODY'] },
       department: '74',
       waterType: { in: ['LAKE'] },
       waterCategory: 'FIRST',

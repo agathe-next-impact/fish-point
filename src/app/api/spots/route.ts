@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
       page: searchParams.get('page') ?? undefined,
       limit: searchParams.get('limit') ?? undefined,
       department: searchParams.get('department') ?? undefined,
+      kind: searchParams.getAll('kind'),
       waterType: searchParams.getAll('waterType'),
       waterCategory: searchParams.get('waterCategory') ?? undefined,
       fishCategory: searchParams.getAll('fishCategory'),
