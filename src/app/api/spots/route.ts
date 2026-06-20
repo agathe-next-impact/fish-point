@@ -11,6 +11,7 @@ import { resolveDepartment } from '@/services/geocoding.service';
 import { spotListSelect, toSpotListItem } from '@/lib/spot-list-select';
 import type { Prisma } from '@prisma/client';
 import { buildSpotWhere } from '@/lib/spot-where';
+import { resolveParentWaterBodyId } from '@/lib/spot-hierarchy';
 
 export async function GET(request: NextRequest) {
   try {
@@ -154,6 +155,14 @@ export async function POST(request: NextRequest) {
 
     const geo = await resolveDepartment(data.latitude, data.longitude);
 
+    // Modèle 3 niveaux : une zone d'accès est rattachée au plan d'eau le plus proche
+    // (résolution serveur, NULL si aucun dans le rayon — réversible, non bloquant).
+    // Un plan d'eau n'a pas de parent.
+    const parentId =
+      data.kind === 'ACCESS_ZONE'
+        ? await resolveParentWaterBodyId(data.latitude, data.longitude)
+        : null;
+
     const spot = await prisma.spot.create({
       data: {
         slug,
@@ -167,6 +176,8 @@ export async function POST(request: NextRequest) {
         waterCategory: data.waterCategory,
         fishingTypes: data.fishingTypes,
         accessibility: data.accessibility as Record<string, boolean> | undefined,
+        kind: data.kind,
+        parentId,
         authorId: session.user.id,
         status: 'PENDING',
       },

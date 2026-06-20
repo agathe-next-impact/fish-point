@@ -2,6 +2,8 @@ import { prisma } from '@/lib/prisma';
 import { slugify } from '@/lib/utils';
 import { queryOverpass } from './overpass.service';
 import { getDepartmentBBox, getAllDepartmentCodes } from '@/config/department-bbox';
+import { resolveParentWaterBodyId } from '@/lib/spot-hierarchy';
+import { inferKindFromTags } from '@/lib/osm-kind';
 import type { OverpassElement, IngestionResult } from '@/types/ingestion';
 import type { BBox } from './overpass.service';
 import type { WaterType, FishingType } from '@prisma/client';
@@ -285,21 +287,29 @@ async function processElement(
   const existing = await prisma.spot.findUnique({ where: { externalId } });
 
   const waterType = inferWaterTypeFromTags(tags);
+  const kind = inferKindFromTags(tags);
   const name = buildSpotName(element, department);
 
   if (existing) {
-    // Update existing spot
+    // Update existing spot (réingestion : on reclasse aussi le niveau d'après les tags).
     await prisma.spot.update({
       where: { id: existing.id },
       data: {
         name,
         waterType,
+        kind,
         osmTags: tags,
       },
     });
     result.spotsUpdated++;
     return;
   }
+
+  // Modèle 3 niveaux : une zone d'accès est rattachée au plan d'eau le plus proche
+  // (NULL si aucun dans le rayon — réversible, non bloquant).
+  const parentId = kind === 'ACCESS_ZONE'
+    ? await resolveParentWaterBodyId(coords.lat, coords.lon)
+    : null;
 
   // Create new spot
   const slug = buildSlug(name, element.type, element.id);
@@ -320,6 +330,8 @@ async function processElement(
       dataOrigin: 'AUTO_OSM',
       externalId,
       externalSource: 'overpass_osm',
+      kind,
+      parentId,
       osmTags: tags,
     },
   });

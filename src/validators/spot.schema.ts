@@ -46,6 +46,10 @@ export const createSpotSchema = z.object({
   longitude: z.number().min(-180, 'Longitude invalide').max(180, 'Longitude invalide'),
   waterType: WaterTypeEnum,
   waterCategory: WaterCategoryEnum.optional(),
+  // Modèle 3 niveaux : niveau du spot créé. Défaut WATER_BODY (plan d'eau public) →
+  // rétro-compatible (les anciens clients qui n'envoient pas `kind` créent un plan d'eau).
+  // ACCESS_ZONE = zone/accès public ; son parentId est résolu côté serveur (proximité).
+  kind: SpotKindEnum.default('WATER_BODY'),
   fishingTypes: z.array(FishingTypeEnum).min(1, 'Au moins un type de pêche est requis'),
   accessibility: accessibilitySchema.optional(),
   species: z.array(spotSpeciesInputSchema).optional(),

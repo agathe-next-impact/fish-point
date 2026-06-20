@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { createSpotSchema, type CreateSpotInput, type CreateSpotFormInput } from '@/validators/spot.schema';
+import { createSpotSchema, type CreateSpotFormInput } from '@/validators/spot.schema';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,13 @@ import { useNotificationStore } from '@/store/notification.store';
 import { WATER_TYPE_LABELS, FISHING_TYPE_LABELS } from '@/lib/constants';
 
 const STEPS = ['Localisation', 'Informations', 'Espèces', 'Photos', 'Validation'];
+
+// Modèle 3 niveaux : niveau choisi à la création. Le waypoint privé (niveau 3) reste
+// le modèle PrivateSpot, hors de ce formulaire public.
+const SPOT_KIND_LABELS: Record<'WATER_BODY' | 'ACCESS_ZONE', string> = {
+  WATER_BODY: "Plan d'eau public",
+  ACCESS_ZONE: "Zone / accès public",
+};
 
 export function SpotForm() {
   const [step, setStep] = useState(0);
@@ -28,6 +35,7 @@ export function SpotForm() {
       latitude: 0,
       longitude: 0,
       waterType: 'RIVER',
+      kind: 'WATER_BODY',
       fishingTypes: [],
       accessibility: { pmr: false, parking: false, boatLaunch: false, nightFishing: false },
       species: [],
@@ -117,6 +125,18 @@ export function SpotForm() {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Informations</h2>
             <Input placeholder="Nom du spot" {...register('name')} error={errors.name?.message} />
+            <div>
+              <label className="text-sm font-medium mb-2 block">Niveau</label>
+              <select {...register('kind')} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                {(Object.entries(SPOT_KIND_LABELS) as [keyof typeof SPOT_KIND_LABELS, string][]).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Un plan d&apos;eau pour le lieu lui-même ; une zone d&apos;accès pour une rive,
+                une mise à l&apos;eau ou un parking rattaché à un plan d&apos;eau proche.
+              </p>
+            </div>
             <textarea
               placeholder="Description (optionnel)"
               {...register('description')}
@@ -177,6 +197,7 @@ export function SpotForm() {
             <h2 className="text-xl font-semibold">Récapitulatif</h2>
             <div className="rounded-lg border p-4 space-y-2">
               <p><strong>Nom :</strong> {watch('name')}</p>
+              <p><strong>Niveau :</strong> {SPOT_KIND_LABELS[watch('kind') ?? 'WATER_BODY']}</p>
               <p><strong>Coordonnées :</strong> {watch('latitude')}, {watch('longitude')}</p>
               <p><strong>Type d&apos;eau :</strong> {WATER_TYPE_LABELS[watch('waterType')]}</p>
               <p><strong>Pêche :</strong> {watch('fishingTypes')?.map(t => FISHING_TYPE_LABELS[t]).join(', ')}</p>
