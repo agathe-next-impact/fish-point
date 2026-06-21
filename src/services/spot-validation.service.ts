@@ -97,8 +97,12 @@ export async function computeConfidenceScore(
     });
   }
 
-  // RPG signals
-  if (rpgResult.isInParcel) {
+  // RPG signals — recalibré (2026-06-21) : un plan d'eau légitime est très souvent
+  // entouré de (ou recouvre une) parcelle agricole RPG. Pénaliser un spot qui matche
+  // pourtant un plan d'eau BD TOPO était un faux négatif massif (16/20 points Hub'Eau).
+  // On ne pénalise donc QUE les spots à la fois en parcelle ET sans plan d'eau (= point
+  // posé en plein champ), cumulant alors avec `no_water_body_found` pour un rejet net.
+  if (rpgResult.isInParcel && !waterBody.found) {
     signals.push({
       source: 'rpg',
       signal: 'inside_agricultural_parcel',
