@@ -290,26 +290,30 @@ async function processElement(
   const kind = inferKindFromTags(tags);
   const name = buildSpotName(element, department);
 
+  // Modèle 3 niveaux : une zone d'accès est rattachée au plan d'eau le plus proche.
+  // Rayon 2 km (et non 300 m) : le point représentatif d'un grand plan d'eau est son
+  // centroïde, souvent loin de la jetée/cale sur la rive. NULL si aucun → reste orphelin.
+  // Calculé pour les DEUX chemins : sans ça, l'update reclassait kind sans poser parentId
+  // → zones d'accès orphelines (bug corrigé 2026-06-21).
+  const parentId = kind === 'ACCESS_ZONE'
+    ? await resolveParentWaterBodyId(coords.lat, coords.lon, 2000)
+    : null;
+
   if (existing) {
-    // Update existing spot (réingestion : on reclasse aussi le niveau d'après les tags).
+    // Réingestion : reclasse le niveau ET (re)résout le rattachement.
     await prisma.spot.update({
       where: { id: existing.id },
       data: {
         name,
         waterType,
         kind,
+        parentId,
         osmTags: tags,
       },
     });
     result.spotsUpdated++;
     return;
   }
-
-  // Modèle 3 niveaux : une zone d'accès est rattachée au plan d'eau le plus proche
-  // (NULL si aucun dans le rayon — réversible, non bloquant).
-  const parentId = kind === 'ACCESS_ZONE'
-    ? await resolveParentWaterBodyId(coords.lat, coords.lon)
-    : null;
 
   // Create new spot
   const slug = buildSlug(name, element.type, element.id);
