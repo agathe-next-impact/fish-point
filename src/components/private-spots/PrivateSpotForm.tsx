@@ -123,6 +123,9 @@ export function PrivateSpotForm({ initialData, onSubmit, isSubmitting }: Private
         <p className="mt-1 text-xs text-muted-foreground">
           Cliquez sur la carte pour placer le marqueur ou saisissez les coordonnees manuellement.
         </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Ce point sera rattache au plan d{'’'}eau public le plus proche, le cas echeant (modifiable plus tard).
+        </p>
       </div>
 
       {/* Color */}

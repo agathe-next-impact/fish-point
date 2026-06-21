@@ -18,6 +18,8 @@ export interface PrivateSpot {
   notes: string | null;
   tags: string[];
   userId: string;
+  /** Plan d'eau public rattaché (modèle 3 niveaux). null = non rattaché. */
+  spotId: string | null;
   createdAt: string;
   updatedAt: string;
   visits: PrivateSpotVisit[];

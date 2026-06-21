@@ -160,6 +160,9 @@ model Spot {
   parentId       String?
   parent         Spot?        @relation("SpotHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children       Spot[]       @relation("SpotHierarchy")
+  // Back-relation REQUISE par Prisma pour PrivateSpot.spot (rattachement waypoint privé →
+  // plan d'eau). NE JAMAIS exposer publiquement (coordonnées niveau 3) — non requêtée côté public.
+  privateSpots   PrivateSpot[] @relation("PrivateSpotWaterBody")
 
   @@index([department])
   @@index([waterType])
@@ -529,10 +532,16 @@ model PrivateSpot {
 
   visits      PrivateSpotVisit[]
 
+  // Modèle 3 niveaux : rattachement UNIDIRECTIONNEL optionnel d'un waypoint privé (niveau 3)
+  // à son plan d'eau public (niveau 1). SetNull : supprimer le plan d'eau ne détruit pas le waypoint.
+  spotId      String?
+  spot        Spot?    @relation("PrivateSpotWaterBody", fields: [spotId], references: [id], onDelete: SetNull)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([userId])
+  @@index([spotId])
   @@map("private_spots")
 }
 

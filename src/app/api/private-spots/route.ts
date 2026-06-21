@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { createPrivateSpotSchema } from '@/validators/private-spot.schema';
+import { resolveParentWaterBodyId } from '@/lib/spot-hierarchy';
 
 export async function GET(request: NextRequest) {
   try {
@@ -75,6 +76,14 @@ export async function POST(request: NextRequest) {
 
     const data = validation.data;
 
+    // Modèle 3 niveaux : si le client ne fournit pas de plan d'eau (cas par défaut, pas
+    // de picker), on tente une auto-résolution par proximité (≤ 300 m, NULL sinon). Un
+    // `spotId` explicite n'est jamais écrasé (choix client > auto). Modifiable via PATCH.
+    const spotId =
+      data.spotId == null
+        ? await resolveParentWaterBodyId(data.latitude, data.longitude)
+        : data.spotId;
+
     const spot = await prisma.privateSpot.create({
       data: {
         name: data.name,
@@ -85,6 +94,7 @@ export async function POST(request: NextRequest) {
         icon: data.icon,
         notes: data.notes,
         tags: data.tags || [],
+        spotId,
         userId: session.user.id,
       },
     });
