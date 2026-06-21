@@ -3,6 +3,15 @@ import type { OverpassElement, OverpassResponse } from '@/types/ingestion';
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 const DELAY_MS = 2000;
 
+// Overpass (Apache/mod_security devant overpass-api.de) renvoie 406 Not Acceptable aux
+// requêtes dont le User-Agent est celui par défaut de Node/undici. Vercel tourne sous
+// undici → sans cet en-tête, TOUTE ingestion OSM échoue en prod (osmTags jamais peuplés).
+// Un UA explicite (étiquette Overpass) débloque les appels. Cf. diagnostic 2026-06-21.
+const OVERPASS_HEADERS = {
+  'Content-Type': 'application/x-www-form-urlencoded',
+  'User-Agent': 'FishSpot/1.0 (+https://fishspot.fr)',
+} as const;
+
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -51,7 +60,7 @@ export async function queryOverpass(bbox: BBox): Promise<OverpassElement[]> {
 
   const res = await fetch(OVERPASS_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: OVERPASS_HEADERS,
     body: `data=${encodeURIComponent(query)}`,
   });
 
@@ -60,7 +69,7 @@ export async function queryOverpass(bbox: BBox): Promise<OverpassElement[]> {
     await delay(5000);
     const retry = await fetch(OVERPASS_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: OVERPASS_HEADERS,
       body: `data=${encodeURIComponent(query)}`,
     });
     if (!retry.ok) throw new Error(`Overpass retry failed: ${retry.status}`);
