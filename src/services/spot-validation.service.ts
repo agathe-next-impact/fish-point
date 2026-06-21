@@ -200,10 +200,13 @@ export async function computeConfidenceScore(
  * Processes spots that haven't been validated yet (validatedAt IS NULL).
  * Only targets auto-discovered spots (not user-created ones).
  *
- * When autoDecide is true:
- *   - score < 15  → REJECTED
- *   - score > 60  → APPROVED + isVerified
- *   - 15-60       → PENDING (manual review)
+ * autoDecide = politique « reject-only » (recalibré 2026-06-21). Les spots auto-découverts
+ * sont créés APPROVED et DÉJÀ visibles : on ne les démote JAMAIS (sinon on masque ~47 k
+ * spots OSM qui plafonnent légitimement à 40-55, faute des bonus observations/origine
+ * propres aux points Hub'Eau). On élague uniquement les faux positifs :
+ *   - score < 15  → REJECTED (sans plan d'eau ET en plein champ)
+ *   - score > 60  → isVerified = true (badge confiance ; status APPROVED inchangé)
+ *   - 15-60       → conservé tel quel (aucun changement de status)
  */
 export async function validateSpotsBatch(options?: {
   departement?: string;
@@ -229,7 +232,7 @@ export async function validateSpotsBatch(options?: {
 
   const spots = await prisma.spot.findMany({
     where: whereClause,
-    select: { id: true, latitude: true, longitude: true, osmTags: true, confidenceDetails: true },
+    select: { id: true, latitude: true, longitude: true, osmTags: true, confidenceDetails: true, kind: true },
     take: batchSize,
     orderBy: { createdAt: 'asc' },
   });
@@ -259,16 +262,20 @@ export async function validateSpotsBatch(options?: {
       };
 
       if (options?.autoDecide) {
-        if (result.confidenceScore < 15) {
+        // Reject-only : ne JAMAIS démoter (les spots sont déjà APPROVED/visibles),
+        // élaguer seulement le plancher des faux positifs.
+        if (spot.kind === 'ACCESS_ZONE') {
+          // Modèle 3 niveaux : une zone d'accès (jetée/cale/parking) n'est PAS sur un plan
+          // d'eau → le scoring « plan d'eau » la noterait à tort à 0. Jamais rejetée ici.
+          flagged++;
+        } else if (result.confidenceScore < 15) {
           updateData.status = 'REJECTED';
           rejected++;
         } else if (result.confidenceScore > 60) {
-          updateData.status = 'APPROVED';
-          updateData.isVerified = true;
+          updateData.isVerified = true; // badge confiance, status inchangé
           approved++;
         } else {
-          updateData.status = 'PENDING';
-          flagged++;
+          flagged++; // conservé tel quel (pas de démotion en PENDING)
         }
       }
 
