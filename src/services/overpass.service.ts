@@ -28,6 +28,15 @@ export interface BBox {
  */
 function buildFishingQuery(bbox: BBox): string {
   const b = `${bbox.south},${bbox.west},${bbox.north},${bbox.east}`;
+  // Délibérément écartés (mesuré dépt 17, Tier 2) :
+  //  - waterway=river/canal nommés : ~1300+1100 *segments* OSM par département (un cours
+  //    d'eau est fragmenté en multitude de tronçons) → ~2400 quasi-doublons/dept via
+  //    `out center`. La capture linéaire exige une dissolution de segments (Tier 4) ; les
+  //    rivières sont par ailleurs déjà couvertes par les stations Hub'Eau.
+  //  - amenity=parking : volume national non borné (~700 k) → bruit + timeout. Le parking
+  //    reste un *attribut* de proximité d'un accès, pas un spot.
+  //  - natural=coastline : voies continues couvrant tout le littoral, centroïde non
+  //    significatif. L'accès côtier est capté via pier/slipway/breakwater.
   return `
 [out:json][timeout:180];
 (
@@ -44,9 +53,16 @@ function buildFishingQuery(bbox: BBox): string {
   // Named reservoirs
   way["landuse"="reservoir"]["name"](${b});
 
-  // Jetties / piers near water
+  // Infrastructures d'accès (niveau 2 ACCESS_ZONE) — features discrètes, classées par
+  // inferKindFromTags puis rattachées au plan d'eau ≤2 km via resolveParentWaterBodyId.
   node["man_made"="pier"](${b});
   way["man_made"="pier"](${b});
+  node["leisure"="slipway"](${b});
+  way["leisure"="slipway"](${b});
+  node["man_made"="breakwater"](${b});
+  way["man_made"="breakwater"](${b});
+  node["waterway"="access_point"](${b});
+  way["waterway"="access_point"](${b});
 );
 out center tags;
 `;

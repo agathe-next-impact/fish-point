@@ -16,6 +16,7 @@ export function inferKindFromTags(tags: Record<string, string>): SpotKind {
 
   if (
     manMade === 'pier' ||
+    manMade === 'breakwater' ||
     leisure === 'slipway' ||
     amenity === 'parking' ||
     amenity === 'boat_ramp' ||

@@ -4,36 +4,9 @@ import { queryOverpass } from './overpass.service';
 import { getDepartmentBBox, getAllDepartmentCodes } from '@/config/department-bbox';
 import { resolveParentWaterBodyId } from '@/lib/spot-hierarchy';
 import { inferKindFromTags } from '@/lib/osm-kind';
+import { inferWaterTypeFromTags } from '@/lib/osm-water-type';
 import type { OverpassElement, IngestionResult } from '@/types/ingestion';
-import type { BBox } from './overpass.service';
 import type { WaterType, FishingType } from '@prisma/client';
-
-/**
- * Map OSM tags to WaterType enum values.
- */
-function inferWaterTypeFromTags(tags: Record<string, string>): WaterType {
-  const water = tags.water || '';
-  const natural = tags.natural || '';
-  const landuse = tags.landuse || '';
-  const leisure = tags.leisure || '';
-  const manMade = tags.man_made || '';
-
-  if (water === 'lake' || (natural === 'water' && !water)) return 'LAKE';
-  if (water === 'pond' || water === 'basin') return 'POND';
-  if (water === 'reservoir' || landuse === 'reservoir') return 'LAKE';
-  if (water === 'river' || water === 'canal') return 'CANAL';
-  if (natural === 'coastline' || water === 'sea') return 'SEA';
-
-  // Fishing spots without explicit water type — infer from context
-  if (leisure === 'fishing' || tags.fishing === 'yes') {
-    if (manMade === 'pier') return 'LAKE'; // piers are often on lakes/ponds
-    return 'LAKE'; // default for generic fishing spots
-  }
-
-  if (manMade === 'pier') return 'LAKE';
-
-  return 'LAKE'; // default
-}
 
 /**
  * Infer fishing types from water type.
@@ -72,6 +45,9 @@ function buildSpotName(element: OverpassElement, department: string): string {
     water === 'pond' ? 'Étang' :
     water === 'reservoir' ? 'Réservoir' :
     tags.man_made === 'pier' ? 'Jetée' :
+    tags.leisure === 'slipway' ? 'Cale de mise à l\'eau' :
+    tags.man_made === 'breakwater' ? 'Digue' :
+    tags.waterway === 'access_point' ? 'Accès' :
     tags.leisure === 'fishing' ? 'Spot de pêche' :
     'Plan d\'eau';
 

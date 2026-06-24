@@ -11,6 +11,10 @@ describe('inferKindFromTags', () => {
     expect(inferKindFromTags({ man_made: 'pier' })).toBe('ACCESS_ZONE');
   });
 
+  it('man_made=breakwater → ACCESS_ZONE', () => {
+    expect(inferKindFromTags({ man_made: 'breakwater' })).toBe('ACCESS_ZONE');
+  });
+
   it('leisure=slipway → ACCESS_ZONE', () => {
     expect(inferKindFromTags({ leisure: 'slipway' })).toBe('ACCESS_ZONE');
   });
