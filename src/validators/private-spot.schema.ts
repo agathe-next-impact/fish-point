@@ -9,6 +9,10 @@ export const createPrivateSpotSchema = z.object({
   icon: z.string().optional().default('pin'),
   notes: z.string().max(5000, 'Les notes ne doivent pas dépasser 5000 caractères').optional(),
   tags: z.array(z.string()).max(10, 'Maximum 10 tags').optional(),
+  // Modèle 3 niveaux : rattachement optionnel à un plan d'eau public (niveau 1).
+  // Absent ⇒ le serveur tente une auto-résolution par proximité. `null` ⇒ dé-rattachement
+  // explicite (via PATCH). Une string ⇒ rattachement choisi (picker futur).
+  spotId: z.string().min(1).nullable().optional(),
 });
 
 export const updatePrivateSpotSchema = createPrivateSpotSchema.partial();

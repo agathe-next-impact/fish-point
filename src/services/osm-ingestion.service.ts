@@ -2,36 +2,11 @@ import { prisma } from '@/lib/prisma';
 import { slugify } from '@/lib/utils';
 import { queryOverpass } from './overpass.service';
 import { getDepartmentBBox, getAllDepartmentCodes } from '@/config/department-bbox';
+import { resolveParentWaterBodyId } from '@/lib/spot-hierarchy';
+import { inferKindFromTags } from '@/lib/osm-kind';
+import { inferWaterTypeFromTags } from '@/lib/osm-water-type';
 import type { OverpassElement, IngestionResult } from '@/types/ingestion';
-import type { BBox } from './overpass.service';
 import type { WaterType, FishingType } from '@prisma/client';
-
-/**
- * Map OSM tags to WaterType enum values.
- */
-function inferWaterTypeFromTags(tags: Record<string, string>): WaterType {
-  const water = tags.water || '';
-  const natural = tags.natural || '';
-  const landuse = tags.landuse || '';
-  const leisure = tags.leisure || '';
-  const manMade = tags.man_made || '';
-
-  if (water === 'lake' || (natural === 'water' && !water)) return 'LAKE';
-  if (water === 'pond' || water === 'basin') return 'POND';
-  if (water === 'reservoir' || landuse === 'reservoir') return 'LAKE';
-  if (water === 'river' || water === 'canal') return 'CANAL';
-  if (natural === 'coastline' || water === 'sea') return 'SEA';
-
-  // Fishing spots without explicit water type — infer from context
-  if (leisure === 'fishing' || tags.fishing === 'yes') {
-    if (manMade === 'pier') return 'LAKE'; // piers are often on lakes/ponds
-    return 'LAKE'; // default for generic fishing spots
-  }
-
-  if (manMade === 'pier') return 'LAKE';
-
-  return 'LAKE'; // default
-}
 
 /**
  * Infer fishing types from water type.
@@ -70,6 +45,9 @@ function buildSpotName(element: OverpassElement, department: string): string {
     water === 'pond' ? 'Étang' :
     water === 'reservoir' ? 'Réservoir' :
     tags.man_made === 'pier' ? 'Jetée' :
+    tags.leisure === 'slipway' ? 'Cale de mise à l\'eau' :
+    tags.man_made === 'breakwater' ? 'Digue' :
+    tags.waterway === 'access_point' ? 'Accès' :
     tags.leisure === 'fishing' ? 'Spot de pêche' :
     'Plan d\'eau';
 
@@ -285,15 +263,27 @@ async function processElement(
   const existing = await prisma.spot.findUnique({ where: { externalId } });
 
   const waterType = inferWaterTypeFromTags(tags);
+  const kind = inferKindFromTags(tags);
   const name = buildSpotName(element, department);
 
+  // Modèle 3 niveaux : une zone d'accès est rattachée au plan d'eau le plus proche.
+  // Rayon 2 km (et non 300 m) : le point représentatif d'un grand plan d'eau est son
+  // centroïde, souvent loin de la jetée/cale sur la rive. NULL si aucun → reste orphelin.
+  // Calculé pour les DEUX chemins : sans ça, l'update reclassait kind sans poser parentId
+  // → zones d'accès orphelines (bug corrigé 2026-06-21).
+  const parentId = kind === 'ACCESS_ZONE'
+    ? await resolveParentWaterBodyId(coords.lat, coords.lon, 2000)
+    : null;
+
   if (existing) {
-    // Update existing spot
+    // Réingestion : reclasse le niveau ET (re)résout le rattachement.
     await prisma.spot.update({
       where: { id: existing.id },
       data: {
         name,
         waterType,
+        kind,
+        parentId,
         osmTags: tags,
       },
     });
@@ -320,6 +310,8 @@ async function processElement(
       dataOrigin: 'AUTO_OSM',
       externalId,
       externalSource: 'overpass_osm',
+      kind,
+      parentId,
       osmTags: tags,
     },
   });

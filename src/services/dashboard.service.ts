@@ -41,6 +41,14 @@ export interface ProgressionEntry {
   totalWeight: number;
 }
 
+export interface DashboardSummary {
+  hour: CatchByHour[];
+  bait: CatchByBait[];
+  weather: CatchByWeather[];
+  species: CatchBySpecies[];
+  progression: ProgressionEntry[];
+}
+
 function buildParams(filters?: DashboardFilters): string {
   if (!filters) return '';
   const params = new URLSearchParams();
@@ -84,6 +92,13 @@ export async function fetchCatchesBySpecies(filters?: DashboardFilters): Promise
 export async function fetchProgression(filters?: DashboardFilters): Promise<ProgressionEntry[]> {
   const res = await fetch(`/api/dashboard/progression${buildParams(filters)}`);
   if (!res.ok) throw new Error('Failed to fetch progression');
+  const json = await res.json();
+  return json.data;
+}
+
+export async function fetchDashboardSummary(filters?: DashboardFilters): Promise<DashboardSummary> {
+  const res = await fetch(`/api/dashboard/summary${buildParams(filters)}`);
+  if (!res.ok) throw new Error('Failed to fetch dashboard summary');
   const json = await res.json();
   return json.data;
 }

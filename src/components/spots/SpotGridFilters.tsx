@@ -19,6 +19,12 @@ const SCORE_RANGES = [
   { label: '80-100', min: 80, max: 100 },
 ] as const;
 
+/** Espèce sélectionnée pour le filtre « sortie » (id + nom pour l'affichage). */
+export interface SpeciesPick {
+  id: string;
+  name: string;
+}
+
 export interface GridFilters {
   department?: string;
   waterType: string[];
@@ -27,6 +33,30 @@ export interface GridFilters {
   accessType?: string;
   minFishabilityScore?: number;
   maxFishabilityScore?: number;
+  // ── Filtres « sortie » (recherche d'une intention, pas d'un lieu) ──
+  /** Espèces précises ciblées (relation SpotSpecies). */
+  species: SpeciesPick[];
+  /** Mode = position du pêcheur (sous-ensemble FishingType : SHORE/BOAT/FLOAT_TUBE). */
+  fishingMode: string[];
+  /** Technique = manière de pêcher (sous-ensemble FishingType). */
+  fishingTechnique: string[];
+  /** Rayon « autour de moi » en mètres (déclenché avec la géoloc). */
+  radius?: number;
+  lat?: number;
+  lng?: number;
+  // ── Accès physique (booléens JSON accessibility) ──
+  parking?: boolean;
+  boatLaunch?: boolean;
+  pmr?: boolean;
+  nightFishing?: boolean;
+  // ── Filtres exclusifs carte (absorbés depuis l'ancien overlay MapFilters) ──
+  /** Restreint aux spots premium. */
+  premiumOnly?: boolean;
+  /**
+   * Inclut les spots auto-découverts (origine ≠ USER). `true` = comportement par
+   * défaut (tout afficher) ; `false` = uniquement les spots saisis par un pêcheur.
+   */
+  showAutoDiscovered?: boolean;
 }
 
 export const EMPTY_FILTERS: GridFilters = {
@@ -37,6 +67,20 @@ export const EMPTY_FILTERS: GridFilters = {
   accessType: undefined,
   minFishabilityScore: undefined,
   maxFishabilityScore: undefined,
+  species: [],
+  fishingMode: [],
+  fishingTechnique: [],
+  radius: undefined,
+  lat: undefined,
+  lng: undefined,
+  parking: undefined,
+  boatLaunch: undefined,
+  pmr: undefined,
+  nightFishing: undefined,
+  premiumOnly: undefined,
+  // `true` par défaut : on affiche les spots auto-découverts (parité avec l'ancien
+  // overlay `MapFilters`, dont `showAutoDiscovered` valait `true` par défaut).
+  showAutoDiscovered: true,
 };
 
 interface SpotGridFiltersProps {

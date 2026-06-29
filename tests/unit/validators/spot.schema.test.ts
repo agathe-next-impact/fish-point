@@ -72,6 +72,23 @@ describe('createSpotSchema', () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it('should default kind to WATER_BODY when omitted', () => {
+    const result = createSpotSchema.safeParse(validSpot);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.kind).toBe('WATER_BODY');
+  });
+
+  it('should accept an explicit ACCESS_ZONE kind', () => {
+    const result = createSpotSchema.safeParse({ ...validSpot, kind: 'ACCESS_ZONE' });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.kind).toBe('ACCESS_ZONE');
+  });
+
+  it('should reject an unknown kind value', () => {
+    const result = createSpotSchema.safeParse({ ...validSpot, kind: 'NOPE' });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe('nearbyQuerySchema', () => {

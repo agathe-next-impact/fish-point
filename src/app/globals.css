@@ -1,51 +1,153 @@
 @import "tailwindcss";
 @config "../../tailwind.config.ts";
 
+/* ============================================================
+   FishSpot — raw design tokens exposed as Tailwind v4 utilities
+   (new names only — never reuse shadcn token names here, they are
+   consumed as hsl(var(--token)) through the @config color bridge)
+   ============================================================ */
+@theme {
+  --color-abyss: #08303a;
+  --color-abyss-2: #0c3b46;
+  --color-teal: #0e8c7f;
+  --color-teal-deep: #0a6b61;
+  --color-aqua: #5fc9b8;
+  --color-aqua-soft: #d7efe9;
+  --color-amber: #f2a93b;
+  --color-amber-deep: #d98a1c;
+  --color-ink: #122a2f;
+  --color-fs-muted: #5d757b;
+  --color-faint: #8aa0a4;
+  --color-paper: #f3f7f5;
+  --color-line: rgba(18, 42, 47, 0.1);
+  --color-line-soft: rgba(18, 42, 47, 0.06);
+  --color-score-hi: #1f9d6b;
+  --color-fs-accent: var(--fs-accent);
+  --color-fs-accent-deep: var(--fs-accent-deep);
+
+  --radius-fs-sm: 10px;
+  --radius-fs-md: 14px;
+  --radius-fs-lg: 20px;
+  --radius-fs-xl: 28px;
+
+  --shadow-fs-sm: 0 1px 2px rgba(8, 48, 58, 0.06), 0 2px 6px rgba(8, 48, 58, 0.05);
+  --shadow-fs-md: 0 4px 14px rgba(8, 48, 58, 0.08), 0 10px 30px rgba(8, 48, 58, 0.07);
+  --shadow-fs-lg: 0 14px 40px rgba(8, 48, 58, 0.14);
+
+  --font-display: var(--font-bricolage), "Hanken Grotesque", system-ui, sans-serif;
+  --font-ui: var(--font-hanken), system-ui, -apple-system, sans-serif;
+}
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* shadcn semantic tokens remapped to FishSpot (HSL triplets) */
+    --background: 150 20% 96.1%;
+    --foreground: 190.3 44.6% 12.7%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 190.3 44.6% 12.7%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 210 100% 45%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 210 100% 45%;
-    --radius: 0.5rem;
+    --popover-foreground: 190.3 44.6% 12.7%;
+    --primary: 173.8 81.8% 30.2%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 165 42.9% 89%;
+    --secondary-foreground: 173.8 82.9% 22.9%;
+    --muted: 165 42.9% 89%;
+    --muted-foreground: 192 13.9% 42.4%;
+    --accent: 165 42.9% 89%;
+    --accent-foreground: 173.8 82.9% 22.9%;
+    --destructive: 0 72.2% 50.6%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 170 16% 86%;
+    --input: 170 16% 86%;
+    --ring: 173.8 81.8% 30.2%;
+    --radius: 1.25rem;
+
+    /* FishSpot raw palette (hex/rgba — never read via hsl()) */
+    --fs-abyss: #08303a;
+    --fs-abyss-2: #0c3b46;
+    --fs-teal: #0e8c7f;
+    --fs-teal-deep: #0a6b61;
+    --fs-aqua: #5fc9b8;
+    --fs-aqua-soft: #d7efe9;
+    --fs-amber: #f2a93b;
+    --fs-amber-deep: #d98a1c;
+    --fs-ink: #122a2f;
+    --fs-muted: #5d757b;
+    --fs-faint: #8aa0a4;
+    --fs-paper: #f3f7f5;
+    --fs-card: #ffffff;
+    --fs-line: rgba(18, 42, 47, 0.1);
+    --fs-line-soft: rgba(18, 42, 47, 0.06);
+    --fs-score-hi: #1f9d6b;
+
+    /* themeable accent — overridden by [data-accent] (default: lac/teal) */
+    --fs-accent: var(--fs-teal);
+    --fs-accent-deep: var(--fs-teal-deep);
+    --fs-accent-glow: 14, 140, 127;
+
+    /* UI font loaded via Google Fonts <link> (Hanken not in next/font manifest) */
+    --font-hanken: "Hanken Grotesque";
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 100% 55%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 210 100% 55%;
+    --background: 192 75.8% 12.9%;
+    --foreground: 150 20% 96.1%;
+    --card: 191.4 70.7% 16.1%;
+    --card-foreground: 150 20% 96.1%;
+    --popover: 191.4 70.7% 16.1%;
+    --popover-foreground: 150 20% 96.1%;
+    --primary: 170.4 49.5% 58%;
+    --primary-foreground: 192 75.8% 12.9%;
+    --secondary: 191 55% 22%;
+    --secondary-foreground: 165 42.9% 89%;
+    --muted: 191 45% 20%;
+    --muted-foreground: 189.2 12.5% 59.2%;
+    --accent: 191 55% 22%;
+    --accent-foreground: 165 42.9% 89%;
+    --destructive: 0 62.8% 45%;
+    --destructive-foreground: 150 20% 96.1%;
+    --border: 191 40% 24%;
+    --input: 191 40% 24%;
+    --ring: 170.4 49.5% 58%;
+
+    --fs-card: #0c3b46;
+    --fs-paper: #08303a;
+    --fs-line: rgba(255, 255, 255, 0.1);
+    --fs-line-soft: rgba(255, 255, 255, 0.06);
   }
+}
+
+/* ── accent themes ─────────────────────────────────────────
+   switch the FishSpot accent (hex) AND the shadcn --primary/--ring
+   (HSL) together so both bespoke .fs-btn-primary and shadcn
+   bg-primary recolour. Outside @layer so data-attr specificity wins. */
+[data-accent="lac"] {
+  --fs-accent: #0e8c7f;
+  --fs-accent-deep: #0a6b61;
+  --fs-accent-glow: 14, 140, 127;
+  --primary: 173.8 81.8% 30.2%;
+  --ring: 173.8 81.8% 30.2%;
+}
+[data-accent="ocean"] {
+  --fs-accent: #1d6fa5;
+  --fs-accent-deep: #155a86;
+  --fs-accent-glow: 29, 111, 165;
+  --primary: 203.8 70.1% 38%;
+  --ring: 203.8 70.1% 38%;
+}
+[data-accent="foret"] {
+  --fs-accent: #2f8f5b;
+  --fs-accent-deep: #226e44;
+  --fs-accent-glow: 47, 143, 91;
+  --primary: 147.5 50.5% 37.3%;
+  --ring: 147.5 50.5% 37.3%;
+}
+[data-accent="coucher"] {
+  --fs-accent: #d98a1c;
+  --fs-accent-deep: #b06f12;
+  --fs-accent-glow: 217, 138, 28;
+  --primary: 34.9 77.1% 48%;
+  --ring: 34.9 77.1% 48%;
 }
 
 @layer base {
@@ -55,6 +157,7 @@
 
   body {
     @apply bg-background text-foreground;
+    letter-spacing: -0.01em;
   }
 
   .safe-area-bottom {
@@ -62,13 +165,192 @@
   }
 }
 
-/* Mapbox overrides */
-.mapboxgl-popup-content {
-  padding: 0 !important;
-  border-radius: 0.5rem !important;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
+/* ── FishSpot element styles (fs- prefixed to stay isolated) ── */
+@layer components {
+  .fs-dsp {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    line-height: 1.02;
+  }
+
+  .fs-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 15px;
+    border: none;
+    cursor: pointer;
+    border-radius: 14px;
+    padding: 12px 20px;
+    transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+    white-space: nowrap;
+  }
+  .fs-btn:active {
+    transform: translateY(1px) scale(0.985);
+  }
+  .fs-btn-primary {
+    background: var(--fs-accent);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(var(--fs-accent-glow), 0.3);
+  }
+  .fs-btn-primary:hover {
+    background: var(--fs-accent-deep);
+    box-shadow: 0 6px 20px rgba(var(--fs-accent-glow), 0.38);
+  }
+  .fs-btn-ghost {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    backdrop-filter: blur(6px);
+  }
+  .fs-btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  .fs-btn-soft {
+    background: var(--fs-aqua-soft);
+    color: var(--fs-teal-deep);
+  }
+  .fs-btn-soft:hover {
+    background: #c7e7df;
+  }
+  .fs-btn-outline {
+    background: transparent;
+    color: var(--fs-ink);
+    box-shadow: inset 0 0 0 1.5px var(--fs-line);
+  }
+  .fs-btn-outline:hover {
+    box-shadow: inset 0 0 0 1.5px var(--fs-accent);
+    color: var(--fs-accent-deep);
+  }
+
+  .fs-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 13px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--fs-card);
+    color: var(--fs-muted);
+    cursor: pointer;
+    box-shadow: inset 0 0 0 1.5px var(--fs-line);
+    transition: all 0.16s ease;
+    white-space: nowrap;
+  }
+  .fs-chip:hover {
+    box-shadow: inset 0 0 0 1.5px var(--fs-faint);
+    color: var(--fs-ink);
+  }
+  .fs-chip.on {
+    background: var(--fs-accent);
+    color: #fff;
+    box-shadow: none;
+  }
+
+  .fs-card {
+    background: var(--fs-card);
+    border-radius: 20px;
+    box-shadow: var(--shadow-fs-sm, 0 1px 2px rgba(8, 48, 58, 0.06), 0 2px 6px rgba(8, 48, 58, 0.05));
+    overflow: hidden;
+  }
+
+  .fs-score {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    border-radius: 12px;
+    line-height: 1;
+  }
+  .fs-score-hi {
+    color: var(--fs-score-hi);
+  }
+  .fs-score-mid {
+    color: var(--fs-amber-deep);
+  }
+
+  .fs-sk {
+    background: linear-gradient(100deg, #e7eeec 30%, #f4f8f6 50%, #e7eeec 70%);
+    background-size: 200% 100%;
+    animation: fs-sk-shimmer 1.25s ease-in-out infinite;
+    border-radius: 8px;
+  }
+  .dark .fs-sk {
+    background: linear-gradient(100deg, #0e3540 30%, #15485520 50%, #0e3540 70%);
+    background-size: 200% 100%;
+  }
 }
 
+/* ── keyframes (outside @layer) ────────────────────────────── */
+@keyframes fs-sk-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes fs-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fs-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fs-pop {
+  0% { opacity: 0; transform: scale(0.9); }
+  60% { transform: scale(1.02); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes fs-pin-drop {
+  0% { opacity: 0; transform: translateY(-60px) scale(0.6); }
+  60% { opacity: 1; transform: translateY(4px) scale(1.05); }
+  80% { transform: translateY(-2px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes fs-ping {
+  0% { transform: scale(0.6); opacity: 0.6; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+@keyframes fs-float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes fs-sweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@layer utilities {
+  .anim-rise { animation: fs-rise 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+  .anim-fade { animation: fs-fade 0.5s ease both; }
+  .anim-pop { animation: fs-pop 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.2) both; }
+  .anim-pin-drop { animation: fs-pin-drop 0.6s cubic-bezier(0.2, 0.8, 0.3, 1.1) both; }
+  .anim-ping { animation: fs-ping 1.6s ease-out infinite; }
+  .anim-float-y { animation: fs-float-y 4s ease-in-out infinite; }
+  .screen-enter { animation: fs-fade 0.35s ease both; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-rise,
+  .anim-fade,
+  .anim-pop,
+  .anim-pin-drop,
+  .screen-enter {
+    animation: none !important;
+  }
+}
+
+/* MapLibre popup overrides */
+.maplibregl-popup-content,
+.mapboxgl-popup-content {
+  padding: 0 !important;
+  border-radius: var(--r-md, 14px) !important;
+  box-shadow: 0 4px 14px rgba(8, 48, 58, 0.08), 0 10px 30px rgba(8, 48, 58, 0.07) !important;
+}
+
+.maplibregl-popup-close-button,
 .mapboxgl-popup-close-button {
   font-size: 1.25rem;
   padding: 0.25rem 0.5rem;

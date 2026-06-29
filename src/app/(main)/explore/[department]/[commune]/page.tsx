@@ -17,7 +17,8 @@ export default async function CommunePage({ params }: CommunePageProps) {
   const communeName = decodeURIComponent(commune);
 
   const spots = await prisma.spot.findMany({
-    where: { department, commune: communeName, status: 'APPROVED' },
+    // SEO : ne lister que les plans d'eau (modèle 3 niveaux) — pas les zones d'accès.
+    where: { department, commune: communeName, status: 'APPROVED', kind: 'WATER_BODY' },
     include: { images: { where: { isPrimary: true }, take: 1 } },
     orderBy: { averageRating: 'desc' },
   });
@@ -31,11 +32,12 @@ export default async function CommunePage({ params }: CommunePageProps) {
     reviewCount: s.reviewCount, isPremium: s.isPremium,
     isVerified: s.isVerified, primaryImage: s.images[0]?.url || null,
     fishabilityScore: s.fishabilityScore, dataOrigin: s.dataOrigin, accessType: s.accessType,
+    kind: s.kind, parentId: s.parentId,
   }));
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <h1 className="text-2xl font-bold mb-6">Spots à {communeName} ({department})</h1>
+      <h1 className="fs-dsp text-2xl font-extrabold text-ink mb-6">Spots à {communeName} ({department})</h1>
       {spotCards.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {spotCards.map((spot) => <SpotCard key={spot.id} spot={spot} />)}

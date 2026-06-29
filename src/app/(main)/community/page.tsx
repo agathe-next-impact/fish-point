@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: 'Communauté' };
 export default function CommunityPage() {
   return (
     <div className="container mx-auto px-4 py-6 max-w-2xl">
-      <h1 className="text-2xl font-bold mb-6">Communauté</h1>
+      <h1 className="fs-dsp text-2xl font-extrabold text-ink mb-6">Communauté</h1>
       <ActivityFeed activities={[]} />
     </div>
   );

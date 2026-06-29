@@ -11,6 +11,11 @@ const FISHING_FRIENDLY_NATURES = [
   'Étang',
   'Gravière',
   'Lac naturel',
+  // Ajoutés après mesure terrain (2026-06-21) : natures pêchables fréquentes en BD TOPO
+  // qui n'étaient pas reconnues (cours d'eau, canaux, lagunes côtières).
+  'Canal',
+  'Lagune',
+  'Ecoulement naturel',
 ];
 
 const NEGATIVE_NATURES = [

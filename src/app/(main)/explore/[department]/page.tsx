@@ -24,7 +24,8 @@ export default async function DepartmentPage({ params }: DepartmentPageProps) {
   if (!dept) notFound();
 
   const spots = await prisma.spot.findMany({
-    where: { department, status: 'APPROVED' },
+    // SEO : ne lister que les plans d'eau (modèle 3 niveaux) — pas les zones d'accès.
+    where: { department, status: 'APPROVED', kind: 'WATER_BODY' },
     include: { images: { where: { isPrimary: true }, take: 1 } },
     orderBy: { averageRating: 'desc' },
     take: 50,
@@ -39,11 +40,12 @@ export default async function DepartmentPage({ params }: DepartmentPageProps) {
     reviewCount: s.reviewCount, isPremium: s.isPremium,
     isVerified: s.isVerified, primaryImage: s.images[0]?.url || null,
     fishabilityScore: s.fishabilityScore, dataOrigin: s.dataOrigin, accessType: s.accessType,
+    kind: s.kind, parentId: s.parentId,
   }));
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <h1 className="text-2xl font-bold mb-2">Spots de pêche - {dept.name} ({dept.code})</h1>
+      <h1 className="fs-dsp text-2xl font-extrabold text-ink mb-2">Spots de pêche - {dept.name} ({dept.code})</h1>
       <p className="text-muted-foreground mb-6">{dept.region}</p>
 
       {spotCards.length > 0 ? (

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useUserStore } from '@/store/user.store';
+import type { AccentTheme } from '@/store/user.store';
 
 type Theme = 'light' | 'dark';
 
@@ -9,12 +10,15 @@ interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
+  accent: AccentTheme;
+  setAccent: (accent: AccentTheme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const preference = useUserStore((s) => s.preferences.theme);
+  const accent = useUserStore((s) => s.preferences.accent);
   const [theme, setThemeState] = useState<Theme>('light');
 
   useEffect(() => {
@@ -32,6 +36,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.classList.add(theme);
   }, [theme]);
 
+  useEffect(() => {
+    document.documentElement.dataset.accent = accent ?? 'lac';
+  }, [accent]);
+
   const setTheme = (t: Theme) => {
     setThemeState(t);
     useUserStore.getState().setPreference('theme', t);
@@ -41,8 +49,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setTheme(theme === 'light' ? 'dark' : 'light');
   };
 
+  const setAccent = (a: AccentTheme) => {
+    useUserStore.getState().setPreference('accent', a);
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme, accent: accent ?? 'lac', setAccent }}>
       {children}
     </ThemeContext.Provider>
   );

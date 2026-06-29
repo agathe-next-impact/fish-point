@@ -2,11 +2,13 @@ import { config as loadEnv } from 'dotenv';
 loadEnv();
 loadEnv({ path: '.env.local', override: true });
 
+import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { FISHBASE_DATA } from '../src/config/fishbase-data';
+import { getDatabaseUrl } from '../src/lib/database-url';
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg({ connectionString: getDatabaseUrl() });
 const prisma = new PrismaClient({ adapter });
 
 const FISH_SPECIES = [
@@ -194,13 +196,15 @@ async function main() {
   console.log('Seeding database...');
 
   // Create user
+  const demoPasswordHash = await bcrypt.hash('demo1234', 10);
   const user = await prisma.user.upsert({
     where: { email: 'demo@fishspot.fr' },
-    update: {},
+    update: { passwordHash: demoPasswordHash },
     create: {
       email: 'demo@fishspot.fr',
       name: 'Pêcheur Demo',
       username: 'pecheur_demo',
+      passwordHash: demoPasswordHash,
       level: 5,
       xp: 1250,
     },

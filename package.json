@@ -2,12 +2,10 @@
   "name": "fish-point",
   "version": "0.1.0",
   "private": true,
-  "workspaces": [
-    "shared"
-  ],
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "vercel-build": "prisma migrate deploy && prisma generate && next build",
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",

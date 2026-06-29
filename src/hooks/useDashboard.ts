@@ -7,8 +7,17 @@ import {
   fetchCatchesByWeather,
   fetchCatchesBySpecies,
   fetchProgression,
+  fetchDashboardSummary,
   type DashboardFilters,
 } from '@/services/dashboard.service';
+
+export function useDashboardSummary(filters?: DashboardFilters) {
+  return useQuery({
+    queryKey: ['dashboard', 'summary', filters],
+    queryFn: () => fetchDashboardSummary(filters),
+    staleTime: 300000,
+  });
+}
 
 export function useCatchesByHour(filters?: DashboardFilters) {
   return useQuery({

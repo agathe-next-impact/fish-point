@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Droplets } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DataUnavailable, shouldShowDataUnavailable } from './DataUnavailable';
 
 interface QualityParameter {
   parameter: string;
@@ -46,7 +47,10 @@ interface WaterQualityResponse {
 
 async function fetchWaterQuality(spotId: string): Promise<WaterQualityResponse> {
   const res = await fetch(`/api/spots/${spotId}/water-quality`);
-  if (!res.ok) return { parameters: [], biologicalIndices: [] };
+  // Throw sur échec HTTP : react-query expose alors `isError`, ce qui permet de
+  // distinguer une panne d'un succès vide (sinon « donnée indisponible » masquerait
+  // une erreur serveur).
+  if (!res.ok) throw new Error(`water-quality fetch failed: ${res.status}`);
   const json = await res.json();
   return {
     parameters: json.data ?? [],
@@ -64,10 +68,12 @@ const BIO_QUALITY_STYLES: Record<string, { bg: string; text: string }> = {
 
 interface SpotWaterQualityProps {
   spotId: string;
+  /** Slug du spot — cible du CTA quand la section est vide. */
+  spotSlug?: string;
 }
 
-export function SpotWaterQuality({ spotId }: SpotWaterQualityProps) {
-  const { data, isLoading } = useQuery({
+export function SpotWaterQuality({ spotId, spotSlug }: SpotWaterQualityProps) {
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['spotWaterQuality', spotId],
     queryFn: () => fetchWaterQuality(spotId),
     staleTime: 600_000,
@@ -97,7 +103,14 @@ export function SpotWaterQuality({ spotId }: SpotWaterQualityProps) {
   const params = data?.parameters ?? [];
   const bioIndices = data?.biologicalIndices ?? [];
 
-  if (params.length === 0 && bioIndices.length === 0) return null;
+  const isEmpty = params.length === 0 && bioIndices.length === 0;
+  if (isEmpty) {
+    // `isLoading` est déjà géré au-dessus (skeleton). Ici : succès vide → message
+    // explicite ; erreur → on ne masque pas la panne (return null).
+    return shouldShowDataUnavailable({ isLoading, isError, isEmpty }) ? (
+      <DataUnavailable spotSlug={spotSlug} sectionLabel="Qualité de l'eau" />
+    ) : null;
+  }
 
   // Find the most recent measurement date
   const latestDate = params.reduce((latest, p) => {

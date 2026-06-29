@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: 'Réglementation pêche' };
 export default function RegulationsPage() {
   return (
     <div className="container mx-auto px-4 py-6">
-      <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
+      <h1 className="fs-dsp text-2xl font-extrabold text-ink mb-2 flex items-center gap-2">
         <Shield className="h-6 w-6 text-primary" />
         Réglementation pêche
       </h1>

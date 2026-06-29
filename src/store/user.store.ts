@@ -1,8 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export type AccentTheme = 'lac' | 'ocean' | 'foret' | 'coucher';
+
 interface UserPreferences {
   theme: 'light' | 'dark' | 'system';
+  accent: AccentTheme;
   mapStyle: string;
   defaultRadius: number;
   showPremiumSpots: boolean;
@@ -17,6 +20,7 @@ interface UserState {
 
 const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'system',
+  accent: 'lac',
   mapStyle: 'streets',
   defaultRadius: 10000,
   showPremiumSpots: true,

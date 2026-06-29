@@ -33,7 +33,7 @@
 
 1. **Paiement Stripe** : webhook `/api/webhooks/stripe` (signature, idempotence, mise à jour `User.isPremium`)
 2. **Sync offline catches** : route `/api/catches/sync` + `lib/offline-db.ts` côté client
-3. **Auth mobile bearer** : `/api/auth/mobile-login`, `mobile-register`, `push-token`
+3. **Auth mobile bearer** : suspendue en mode PWA-only, les routes ne sont plus deployees
 4. **Cron endpoints** : test bearer + comportement nominal vs `compute-alerts` & `refresh-scores`
 5. **Validation Zod aux frontières** : tester schemas `spot`, `catch`, `private-spot`, `fishing-card`
 6. **Permissions privées** : un utilisateur ne peut pas lire les `PrivateSpot` d'un autre

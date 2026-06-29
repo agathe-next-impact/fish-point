@@ -2,12 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MapPin, List, PlusCircle, BookOpen, Users, Award, BarChart3, Settings, MapPinned, AlertTriangle, CreditCard } from 'lucide-react';
+import { Compass, PlusCircle, BookOpen, Users, Award, BarChart3, Settings, MapPinned, AlertTriangle, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { href: '/map', label: 'Carte', icon: MapPin },
-  { href: '/spots', label: 'Spots', icon: List },
+  { href: '/spots', label: 'Explorer', icon: Compass },
   { href: '/spots/new', label: 'Ajouter', icon: PlusCircle },
   { href: '/catches', label: 'Mes prises', icon: BookOpen },
   { href: '/my-spots', label: 'Mes spots privés', icon: MapPinned },

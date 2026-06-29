@@ -75,7 +75,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* Group header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-1">{group.name}</h1>
+        <h1 className="fs-dsp text-2xl font-extrabold text-ink mb-1">{group.name}</h1>
         {group.description && (
           <p className="text-muted-foreground">{group.description}</p>
         )}

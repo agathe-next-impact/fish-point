@@ -7,6 +7,21 @@ import { findNearestHydrobioStation } from '@/services/hubeau-hydrobio.service';
 
 export const maxDuration = 300;
 
+async function processWithConcurrency<T>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<void>,
+) {
+  let index = 0;
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (index < items.length) {
+      const item = items[index++];
+      await worker(item);
+    }
+  });
+  await Promise.all(workers);
+}
+
 /**
  * Link spots to their nearest hydro and temperature stations.
  * Run once after ingestion, then weekly to catch new stations.
@@ -57,71 +72,48 @@ export async function GET(request: NextRequest) {
     let piezoLinked = 0;
     let hydrobioLinked = 0;
 
-    for (const spot of spots) {
-      // Link hydro station
-      if (!spot.hydroStationCode && (type === 'all' || type === 'hydro')) {
-        try {
-          const stationCode = await findNearestStation(spot.latitude, spot.longitude);
-          if (stationCode) {
-            await prisma.spot.update({
-              where: { id: spot.id },
-              data: { hydroStationCode: stationCode },
-            });
-            hydroLinked++;
-          }
-        } catch {
-          // Non-critical
-        }
+    await processWithConcurrency(spots, 6, async (spot) => {
+      const updates: Record<string, string> = {};
+
+      const [hydro, temp, piezo, hydrobio] = await Promise.allSettled([
+        !spot.hydroStationCode && (type === 'all' || type === 'hydro')
+          ? findNearestStation(spot.latitude, spot.longitude)
+          : Promise.resolve(null),
+        !spot.tempStationCode && (type === 'all' || type === 'temp')
+          ? findNearestTempStation(spot.latitude, spot.longitude)
+          : Promise.resolve(null),
+        !spot.piezoStationCode && (type === 'all' || type === 'piezo')
+          ? findNearestPiezoStation(spot.latitude, spot.longitude)
+          : Promise.resolve(null),
+        !spot.hydrobioStationCode && (type === 'all' || type === 'hydrobio')
+          ? findNearestHydrobioStation(spot.latitude, spot.longitude)
+          : Promise.resolve(null),
+      ]);
+
+      if (hydro.status === 'fulfilled' && hydro.value) {
+        updates.hydroStationCode = hydro.value;
+        hydroLinked++;
+      }
+      if (temp.status === 'fulfilled' && temp.value) {
+        updates.tempStationCode = temp.value.code_station;
+        tempLinked++;
+      }
+      if (piezo.status === 'fulfilled' && piezo.value) {
+        updates.piezoStationCode = piezo.value.code_bss;
+        piezoLinked++;
+      }
+      if (hydrobio.status === 'fulfilled' && hydrobio.value) {
+        updates.hydrobioStationCode = hydrobio.value.code_station;
+        hydrobioLinked++;
       }
 
-      // Link temp station
-      if (!spot.tempStationCode && (type === 'all' || type === 'temp')) {
-        try {
-          const station = await findNearestTempStation(spot.latitude, spot.longitude);
-          if (station) {
-            await prisma.spot.update({
-              where: { id: spot.id },
-              data: { tempStationCode: station.code_station },
-            });
-            tempLinked++;
-          }
-        } catch {
-          // Non-critical
-        }
+      if (Object.keys(updates).length > 0) {
+        await prisma.spot.update({
+          where: { id: spot.id },
+          data: updates,
+        });
       }
-
-      // Link piezo station
-      if (!spot.piezoStationCode && (type === 'all' || type === 'piezo')) {
-        try {
-          const station = await findNearestPiezoStation(spot.latitude, spot.longitude);
-          if (station) {
-            await prisma.spot.update({
-              where: { id: spot.id },
-              data: { piezoStationCode: station.code_bss },
-            });
-            piezoLinked++;
-          }
-        } catch {
-          // Non-critical
-        }
-      }
-
-      // Link hydrobio station
-      if (!spot.hydrobioStationCode && (type === 'all' || type === 'hydrobio')) {
-        try {
-          const station = await findNearestHydrobioStation(spot.latitude, spot.longitude);
-          if (station) {
-            await prisma.spot.update({
-              where: { id: spot.id },
-              data: { hydrobioStationCode: station.code_station },
-            });
-            hydrobioLinked++;
-          }
-        } catch {
-          // Non-critical
-        }
-      }
-    }
+    });
 
     return NextResponse.json({
       success: true,

@@ -47,8 +47,8 @@ export const DEFAULT_METADATA: Metadata = {
   },
   manifest: '/manifest.json',
   icons: {
-    icon: '/icons/icon-192.png',
-    apple: '/icons/icon-192.png',
+    icon: '/favicon.ico',
+    apple: '/favicon.ico',
   },
 };
 

@@ -2,40 +2,79 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MapPin, BookOpen, BarChart3, PlusCircle, User } from 'lucide-react';
+import { Compass, Bookmark, BookOpen, Plus, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const navItems = [
-  { href: '/map', label: 'Carte', icon: MapPin },
+// Nav cible (spot-experience-architect) : Explorer · Enregistrés · Ajouter · Prises · Profil.
+// « Ajouter » = le FAB central (nouvelle prise). « Stats » bascule dans le menu
+// utilisateur (Navbar) pour tenir la barre à 5 emplacements.
+const tabs = [
+  { href: '/spots', label: 'Explorer', icon: Compass },
+  { href: '/enregistres', label: 'Enregistrés', icon: Bookmark },
   { href: '/catches', label: 'Prises', icon: BookOpen },
-  { href: '/catches/new', label: 'Ajouter', icon: PlusCircle },
-  { href: '/dashboard', label: 'Stats', icon: BarChart3 },
   { href: '/profile', label: 'Profil', icon: User },
 ];
 
 export function MobileNav() {
   const pathname = usePathname();
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background lg:hidden safe-area-bottom">
-      <div className="flex items-center justify-around h-16">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex flex-col items-center justify-center gap-1 w-full h-full text-xs transition-colors',
-                isActive ? 'text-primary' : 'text-muted-foreground',
-              )}
-            >
-              <item.icon className="h-5 w-5" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-line bg-card/85 backdrop-blur-xl lg:hidden safe-area-bottom">
+      <div className="relative flex h-16 items-center justify-around px-2">
+        {/* left two tabs */}
+        {tabs.slice(0, 2).map((tab) => (
+          <TabLink key={tab.href} {...tab} active={isActive(tab.href)} />
+        ))}
+
+        {/* center FAB */}
+        <Link
+          href="/catches/new"
+          aria-label="Nouvelle prise"
+          className="flex flex-col items-center justify-center"
+          style={{ transform: 'translateY(-22px)' }}
+        >
+          <span
+            className="flex h-[54px] w-[54px] items-center justify-center rounded-[18px] text-white"
+            style={{
+              background: 'var(--fs-accent)',
+              boxShadow: '0 8px 20px rgba(var(--fs-accent-glow), 0.4)',
+            }}
+          >
+            <Plus className="h-7 w-7" strokeWidth={2.4} />
+          </span>
+        </Link>
+
+        {/* right two tabs */}
+        {tabs.slice(2).map((tab) => (
+          <TabLink key={tab.href} {...tab} active={isActive(tab.href)} />
+        ))}
       </div>
     </nav>
+  );
+}
+
+function TabLink({
+  href,
+  label,
+  icon: Icon,
+  active,
+}: {
+  href: string;
+  label: string;
+  icon: typeof Compass;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        'flex w-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors',
+        active ? 'text-primary' : 'text-muted-foreground',
+      )}
+    >
+      <Icon className="h-5 w-5" strokeWidth={active ? 2.2 : 1.9} />
+      <span>{label}</span>
+    </Link>
   );
 }

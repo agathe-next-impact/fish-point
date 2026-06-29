@@ -85,6 +85,11 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
+enum SpotKind {
+  WATER_BODY
+  ACCESS_ZONE
+}
+
 model Spot {
   id             String       @id @default(cuid())
   slug           String       @unique
@@ -149,6 +154,16 @@ model Spot {
   accessType         AccessType?
   accessDetails      Json?
 
+  // Modèle 3 niveaux : plan d'eau public (WATER_BODY) vs zone d'accès public (ACCESS_ZONE).
+  // Une zone d'accès pointe son plan d'eau parent ; le waypoint privé reste le modèle PrivateSpot.
+  kind           SpotKind     @default(WATER_BODY)
+  parentId       String?
+  parent         Spot?        @relation("SpotHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children       Spot[]       @relation("SpotHierarchy")
+  // Back-relation REQUISE par Prisma pour PrivateSpot.spot (rattachement waypoint privé →
+  // plan d'eau). NE JAMAIS exposer publiquement (coordonnées niveau 3) — non requêtée côté public.
+  privateSpots   PrivateSpot[] @relation("PrivateSpotWaterBody")
+
   @@index([department])
   @@index([waterType])
   @@index([status])
@@ -157,6 +172,9 @@ model Spot {
   @@index([dataOrigin])
   @@index([confidenceScore])
   @@index([accessType])
+  @@index([kind])
+  @@index([parentId])
+  @@index([status, kind, parentId])
   @@map("spots")
 }
 
@@ -277,6 +295,7 @@ model Review {
   cleanliness    Int?
   tranquility    Int?
   accessibility  Int?
+  dataAccuracy   Int?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -299,6 +318,7 @@ model Favorite {
   spotId    String
   spot      Spot     @relation(fields: [spotId], references: [id])
   createdAt DateTime @default(now())
+  note      String?  @db.Text
 
   @@unique([userId, spotId, listName])
   @@index([spotId])
@@ -512,10 +532,16 @@ model PrivateSpot {
 
   visits      PrivateSpotVisit[]
 
+  // Modèle 3 niveaux : rattachement UNIDIRECTIONNEL optionnel d'un waypoint privé (niveau 3)
+  // à son plan d'eau public (niveau 1). SetNull : supprimer le plan d'eau ne détruit pas le waypoint.
+  spotId      String?
+  spot        Spot?    @relation("PrivateSpotWaterBody", fields: [spotId], references: [id], onDelete: SetNull)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([userId])
+  @@index([spotId])
   @@map("private_spots")
 }
 

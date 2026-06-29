@@ -20,15 +20,15 @@ export function StatCard({ title, value, subtitle, icon: Icon, trend }: StatCard
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-3xl font-bold tracking-tight">{value}</p>
+            <p className="fs-dsp text-3xl font-extrabold tracking-tight text-ink">{value}</p>
             {subtitle && (
               <p className="text-xs text-muted-foreground">{subtitle}</p>
             )}
           </div>
           <div className="flex flex-col items-center gap-2">
             {Icon && (
-              <div className="rounded-full bg-primary/10 p-3">
-                <Icon className="h-5 w-5 text-primary" />
+              <div className="rounded-fs-md bg-aqua-soft p-3">
+                <Icon className="h-5 w-5 text-teal-deep" strokeWidth={1.9} />
               </div>
             )}
             {trend && (

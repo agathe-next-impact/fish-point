@@ -1,6 +1,6 @@
-import type { WaterType, WaterCategory, FishingType, SpotStatus, Abundance, AccessType } from '@prisma/client';
+import type { WaterType, WaterCategory, FishingType, SpotStatus, Abundance, AccessType, SpotKind } from '@prisma/client';
 
-export type { WaterType, WaterCategory, FishingType, SpotStatus, Abundance, AccessType };
+export type { WaterType, WaterCategory, FishingType, SpotStatus, Abundance, AccessType, SpotKind };
 
 export interface SpotAccessibility {
   pmr: boolean;
@@ -25,10 +25,26 @@ export interface SpotListItem {
   isPremium: boolean;
   isVerified: boolean;
   primaryImage: string | null;
+  accessibility?: SpotAccessibility | null;
   distance?: number;
   fishabilityScore: number | null;
   dataOrigin: string;
   accessType: AccessType | null;
+  /**
+   * Niveau du spot (modèle 3 niveaux) : `WATER_BODY` = plan d'eau public,
+   * `ACCESS_ZONE` = zone/accès public rattaché à un plan d'eau parent. Lecture passive
+   * (slice 1) : aucun filtre par défaut ni affichage ne le consomme encore. `parentId`
+   * pointe vers le plan d'eau parent d'une `ACCESS_ZONE` (null pour un `WATER_BODY`).
+   */
+  kind: SpotKind;
+  parentId: string | null;
+  /**
+   * Espèces documentées du spot (jointure légère `speciesId`+`abundance`, ajoutée au
+   * `spotListSelect`). Sert au verdict « Adapté à votre sortie » par item de liste
+   * (différenciateur = abondance de l'espèce ciblée). `SpotDetail` le spécialise en
+   * `SpotSpeciesData[]` (sur-ensemble compatible).
+   */
+  species?: Array<{ speciesId: string; abundance: Abundance }>;
 }
 
 export interface AccessDetails {
@@ -59,6 +75,26 @@ export interface SpotDetail extends SpotListItem {
   images: SpotImageData[];
   species: SpotSpeciesData[];
   regulations: SpotRegulationData[];
+}
+
+/**
+ * Résumé d'une zone d'accès public (modèle 3 niveaux) listée sur la fiche de son plan
+ * d'eau parent (bloc « Accès publics »). Forme d'affichage légère, pas la fiche complète.
+ */
+export interface SpotAccessZoneSummary {
+  id: string;
+  slug: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  accessType: AccessType | null;
+}
+
+/** Résumé du plan d'eau parent, pour le bandeau « Cet accès appartient à … ». */
+export interface SpotParentSummary {
+  id: string;
+  slug: string;
+  name: string;
 }
 
 export interface SpotImageData {
@@ -119,6 +155,11 @@ export interface SpotFilters {
   radius?: number;
   lat?: number;
   lng?: number;
+  /** Bornes géographiques (zone Explorer committée) — bornent la liste à la fenêtre carte. */
+  north?: number;
+  south?: number;
+  east?: number;
+  west?: number;
 }
 
 export interface SpotCreateInput {

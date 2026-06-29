@@ -77,11 +77,11 @@ Les tuiles vecteur auto-hébergées sont le prérequis bloquant pour tous les lo
 
 **Acceptance criteria**
 - Given : le store Blob est créé dans Vercel et `BLOB_READ_WRITE_TOKEN` est en env
-- When : `npm run upload-tiles` est lancé avec `./tiles/france.pmtiles`
+- When : `npm run upload-tiles` est lancé avec `./tiles/western-europe.pmtiles`
 - Then : le script termine sans erreur et imprime l'URL publique générée
 
 - Given : la variable `NEXT_PUBLIC_PMTILES_URL` est renseignée
-- When : `curl -I --range 0-1000 "$NEXT_PUBLIC_PMTILES_URL/france.pmtiles"`
+- When : `curl -I --range 0-1000 "$NEXT_PUBLIC_PMTILES_URL/western-europe.pmtiles"`
 - Then : la réponse retourne `206 Partial Content` avec `Accept-Ranges: bytes` et `Cache-Control: public, max-age=31536000, immutable`
 
 - Given : la commande curl avec `Origin: http://localhost:3000`
@@ -89,16 +89,16 @@ Les tuiles vecteur auto-hébergées sont le prérequis bloquant pour tous les lo
 
 - Given : on déclenche manuellement le workflow `update-tiles.yml`
 - When : le job tourne
-- Then : un nouveau `france.pmtiles` extrait du planet du jour est poussé sur Blob
+- Then : un nouveau `western-europe.pmtiles` extrait du planet du jour est poussé sur Blob
 
 **Tasks**
 - [ ] Créer un store Vercel Blob via dashboard Vercel → Storage (nom suggéré : `fishspot-tiles`)
 - [ ] `vercel env pull .env.local` pour récupérer `BLOB_READ_WRITE_TOKEN`
 - [ ] `npm install @vercel/blob`
-- [ ] Extraire France depuis le planet PMTiles quotidien via CLI `pmtiles extract` (Docker ou binaire natif — l'UI app.protomaps.com ne supporte pas un polygone aussi grand). Commande dans `docs/ops/pmtiles-vercel-blob-setup.md` §4. Résultat : `./tiles/france.pmtiles` (~300–500 Mo). Alternative zéro-install : déclencher `gh workflow run update-tiles.yml` qui fait extract + upload en une étape.
+- [ ] Extraire l'Europe de l'Ouest depuis le planet PMTiles quotidien via CLI `pmtiles extract` (Docker ou binaire natif). Commande dans `docs/ops/pmtiles-vercel-blob-setup.md` §4. Résultat : `./tiles/western-europe.pmtiles`. Alternative zéro-install : déclencher `gh workflow run update-tiles.yml` qui fait extract + upload en une étape.
 - [ ] `npm run upload-tiles` — uploade via `scripts/upload-pmtiles.ts` avec `Cache-Control` immutable 1 an
-- [ ] Définir `NEXT_PUBLIC_PMTILES_URL` (base URL retournée par Blob, sans `/france.pmtiles`) en local + sur Vercel (Preview + Production)
-- [ ] Définir `EXPO_PUBLIC_PMTILES_URL` avec la même valeur dans `mobile/.env` ou `mobile/app.json`
+- [ ] Définir `NEXT_PUBLIC_PMTILES_URL` (base URL retournée par Blob, sans `/western-europe.pmtiles`) en local + sur Vercel (Preview + Production)
+- [ ] Mobile suspendu en mode PWA-only : conserver uniquement `NEXT_PUBLIC_PMTILES_URL` côté web/PWA
 - [ ] Ajouter le secret GitHub `BLOB_READ_WRITE_TOKEN` pour activer le workflow mensuel `.github/workflows/update-tiles.yml`
 - [ ] Vérifier les 3 curl du runbook (§7 de `docs/ops/pmtiles-vercel-blob-setup.md`)
 
@@ -194,9 +194,9 @@ Fichiers à modifier — swap d'import `react-map-gl/mapbox` → `react-map-gl/m
   - Retirer `import 'mapbox-gl/dist/mapbox-gl.css'` → remplacer par `import 'maplibre-gl/dist/maplibre-gl.css'`
   - Retirer la prop `mapboxAccessToken` du composant `<Map>` → utiliser `mapLib` prop ou la config MapLibre
   - Enregistrer le protocole pmtiles au mount : `addProtocol('pmtiles', new Protocol().tile)` dans un `useEffect` ou directement dans le module
-  - Passer `mapStyle` comme URL PMTiles : `pmtiles://${env.NEXT_PUBLIC_PMTILES_URL}/france.pmtiles` + style Protomaps
-- [ ] `src/components/map/SpotCluster.tsx` — swap import (l. 4)
-- [ ] `src/components/map/SpotMarker.tsx`
+  - Passer `mapStyle` comme URL PMTiles : `pmtiles://${env.NEXT_PUBLIC_PMTILES_URL}/western-europe.pmtiles` + style Protomaps
+- [x] `src/components/map/SpotLayer.tsx` — rendu natif MapLibre des spots publics
+- [x] `src/components/map/SpotCluster.tsx` / `SpotMarker.tsx` — remplacés par des layers natifs
   - Swap import (l. 1)
   - Mettre à jour l'import de `formatDistance` : `@/lib/mapbox` → `@/lib/map`
 - [ ] `src/components/map/HeatmapLayer.tsx` — swap import (l. 3)
@@ -470,7 +470,7 @@ L'app Expo utilise `@rnmapbox/maps` v10 dans `mobile/package.json`. La carte mob
 **Tech**
 - Fichiers impactés : `mobile/package.json`, `mobile/app/(tabs)/map.tsx`
 - `@maplibre/maplibre-react-native` est un module natif — incompatible avec Expo Go, nécessite un dev client ou un build natif
-- Variable d'env mobile : `EXPO_PUBLIC_PMTILES_URL` (à ajouter dans `mobile/app.json` ou `.env` mobile) pour pointer vers le même bucket R2 que le web
+- Mobile suspendu en mode PWA-only : ne pas ajouter de variable mobile. Utiliser `NEXT_PUBLIC_PMTILES_URL` pour le web/PWA.
 - `mobile/src/stores/map.store.ts` reste inchangé (gère viewport + filters, pas de dépendance Mapbox)
 - Risque : compatibilité `@maplibre/maplibre-react-native` avec Expo SDK 55 et RN 0.83 — à vérifier dans la matrice de compatibilité du repo MapLibre RN avant de démarrer
 

@@ -11,7 +11,7 @@ export default function ExplorePage() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <h1 className="text-2xl font-bold mb-6">Explorer par département</h1>
+      <h1 className="fs-dsp text-2xl font-extrabold text-ink mb-6">Explorer par département</h1>
       {regions.map((region) => (
         <div key={region} className="mb-8">
           <h2 className="text-lg font-semibold mb-3">{region}</h2>

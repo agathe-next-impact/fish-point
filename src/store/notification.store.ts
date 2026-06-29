@@ -1,11 +1,19 @@
 import { create } from 'zustand';
 
-interface Toast {
+/** Action facultative rendue dans le toast (ex. « Annuler » après un enregistrement). */
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
+export interface Toast {
   id: string;
   type: 'success' | 'error' | 'warning' | 'info';
   title: string;
   description?: string;
   duration?: number;
+  /** Bouton d'action in-toast (optionnel, non-breaking). Cliquer le ferme. */
+  action?: ToastAction;
 }
 
 interface NotificationState {

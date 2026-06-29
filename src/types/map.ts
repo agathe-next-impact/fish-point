@@ -19,7 +19,7 @@ export interface GeoJSONFeature {
     type: 'Point';
     coordinates: [number, number];
   };
-  properties: Record<string, unknown>;
+  properties: Record<string, string | number | boolean | null>;
 }
 
 export interface GeoJSONFeatureCollection {
@@ -29,15 +29,5 @@ export interface GeoJSONFeatureCollection {
 
 export type MapLayer = 'spots' | 'heatmap' | 'regulations' | 'satellite' | 'fishability' | 'privateSpots';
 
-export interface MapFiltersState {
-  radius: number;
-  waterTypes: string[];
-  fishingTypes: string[];
-  species: string[];
-  minRating: number;
-  minFishabilityScore: number;
-  showAutoDiscovered: boolean;
-  pmr: boolean;
-  nightFishing: boolean;
-  premiumOnly: boolean;
-}
+/** Vue active de l'écran Explorer : liste de résultats ou carte. */
+export type ExplorerView = 'list' | 'map';

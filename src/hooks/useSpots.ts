@@ -37,10 +37,14 @@ async function createSpot(data: SpotCreateInput): Promise<ApiResponse<SpotDetail
   return res.json();
 }
 
-export function useSpots(filters: SpotFilters & { page?: number; limit?: number } = {}) {
+export function useSpots(
+  filters: SpotFilters & { page?: number; limit?: number } = {},
+  options: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: ['spots', filters],
     queryFn: () => fetchSpots(filters),
+    enabled: options.enabled ?? true,
   });
 }
 

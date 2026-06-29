@@ -1,12 +1,46 @@
 'use client';
 
-import { Fish, Wind, Droplets, Moon, Thermometer, Gauge, CloudRain, ArrowUp, ArrowDown, Minus, Sun, Layers, AlertTriangle, TrendingDown, CloudDrizzle, Waves, Flower2 } from 'lucide-react';
+import type { ReactNode } from 'react';
+import {
+  Fish,
+  Wind,
+  Droplets,
+  Moon,
+  Thermometer,
+  Gauge,
+  CloudRain,
+  ArrowUp,
+  ArrowDown,
+  Minus,
+  Sun,
+  Layers,
+  AlertTriangle,
+  TrendingDown,
+  CloudDrizzle,
+  Waves,
+  Flower2,
+  CalendarClock,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFishabilityScore } from '@/hooks/useFishabilityScore';
+import {
+  DataUnavailable,
+  shouldShowDataUnavailable,
+} from './DataUnavailable';
+import {
+  summarizeDayConditions,
+  sortConditionsForDisplay,
+  DAY_VERDICT_LABEL,
+  type ConditionImpact,
+  type DayConditionFactor,
+} from '@/lib/day-conditions';
+import { cn } from '@/lib/utils';
 
 interface SpotFishIndexProps {
   spotId: string;
+  /** Slug du spot — cible du CTA « Ajouter une observation » sur l'état vide. */
+  spotSlug?: string;
 }
 
 const FACTOR_ICONS: Record<string, typeof Fish> = {
@@ -26,124 +60,152 @@ const FACTOR_ICONS: Record<string, typeof Fish> = {
   'Pollen': Flower2,
 };
 
-const IMPACT_STYLES = {
-  positive: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-400', Icon: ArrowUp },
-  neutral: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-muted-foreground', Icon: Minus },
-  negative: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400', Icon: ArrowDown },
+const IMPACT_STYLES: Record<
+  ConditionImpact,
+  { row: string; icon: string; Icon: typeof ArrowUp; sr: string }
+> = {
+  positive: {
+    row: 'border-line-soft',
+    icon: 'text-score-hi',
+    Icon: ArrowUp,
+    sr: 'favorable',
+  },
+  neutral: {
+    row: 'border-line-soft',
+    icon: 'text-fs-muted',
+    Icon: Minus,
+    sr: 'neutre',
+  },
+  negative: {
+    row: 'border-amber-deep',
+    icon: 'text-amber-deep',
+    Icon: ArrowDown,
+    sr: 'défavorable',
+  },
 };
 
-export function SpotFishIndex({ spotId }: SpotFishIndexProps) {
+const VERDICT_DOT: Record<string, string> = {
+  favorable: 'bg-score-hi',
+  mitige: 'bg-amber-deep',
+  defavorable: 'bg-amber-deep',
+  inconnu: 'bg-faint',
+};
+
+function CardShell({ children }: { children: ReactNode }) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <CalendarClock className="h-4 w-4" aria-hidden />
+          Conditions du jour
+        </CardTitle>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Carte « Conditions du jour » — lecture pêche des conditions live réelles le
+ * jour de la sortie.
+ *
+ * Reconvertie depuis l'ancienne « Activité piscicole » : on N'AFFICHE PLUS le
+ * score global (le « 78 ») ni le jargon statique/dynamique — ils vivent
+ * désormais dans `SpotScorePanel` (en-tête). Ici on ne montre que les
+ * `factors[]` dynamiques réellement renvoyés par `/api/spots/[id]/score`
+ * (météo, eau, solunaire, crues…), regroupés par impact favorable / à
+ * surveiller. Aucune valeur n'est inventée.
+ */
+export function SpotFishIndex({ spotId, spotSlug }: SpotFishIndexProps) {
   const { data, isLoading, isError } = useFishabilityScore(spotId);
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Fish className="h-4 w-4" />
-            Activité piscicole
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-3">
-            <Skeleton className="w-14 h-14 rounded-full" />
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-3 w-32" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <CardShell>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-3/4" />
+        </div>
+      </CardShell>
     );
   }
 
-  if (isError || !data) {
+  // Panne réelle : ne pas la maquiller en « donnée indisponible ».
+  if (isError) {
     return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Fish className="h-4 w-4" />
-            Activité piscicole
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Score indisponible</p>
-        </CardContent>
-      </Card>
+      <CardShell>
+        <p className="text-sm text-fs-muted">Conditions momentanément indisponibles.</p>
+      </CardShell>
     );
   }
 
-  const staticScore = data.staticScore ?? 0;
-  const dynamicScore = data.dynamicScore ?? 0;
+  const factors: DayConditionFactor[] = data?.factors ?? [];
+  const isEmpty = factors.length === 0;
+
+  // Succès mais aucun signal réel → état explicite (cf. sections vides interdites).
+  if (shouldShowDataUnavailable({ isLoading, isError, isEmpty })) {
+    return <DataUnavailable spotSlug={spotSlug} sectionLabel="Conditions du jour" />;
+  }
+
+  const { counts, verdict } = summarizeDayConditions(factors);
+  const sorted = sortConditionsForDisplay(factors);
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <Fish className="h-4 w-4" />
-          Activité piscicole
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {/* Main score circle */}
-        <div className="flex items-center gap-3">
-          <div
-            className="w-14 h-14 rounded-full border-4 flex items-center justify-center"
-            style={{ borderColor: data.color }}
-          >
-            <span className="text-lg font-bold">{data.fishabilityScore}</span>
-          </div>
-          <div>
-            <p className="font-semibold" style={{ color: data.color }}>
-              {data.label}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Statique {staticScore} · Dynamique {dynamicScore}
-            </p>
-          </div>
+    <CardShell>
+      <div className="space-y-3">
+        {/* Verdict synthétique — d'un coup d'œil, sans score chiffré */}
+        <div className="flex items-center gap-2">
+          <span
+            className={cn('h-2.5 w-2.5 shrink-0 rounded-full', VERDICT_DOT[verdict])}
+            aria-hidden
+          />
+          <p className="text-sm font-semibold text-ink">{DAY_VERDICT_LABEL[verdict]}</p>
         </div>
 
-        {/* Score bars */}
-        <div className="space-y-1.5">
-          <div>
-            <div className="flex justify-between text-xs mb-0.5">
-              <span className="text-muted-foreground">Statique (45%)</span>
-              <span className="font-medium">{staticScore}</span>
-            </div>
-            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-              <div className="h-full rounded-full bg-blue-500 transition-all" style={{ width: `${staticScore}%` }} />
-            </div>
-          </div>
-          <div>
-            <div className="flex justify-between text-xs mb-0.5">
-              <span className="text-muted-foreground">Dynamique (55%)</span>
-              <span className="font-medium">{dynamicScore}</span>
-            </div>
-            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-              <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${dynamicScore}%` }} />
-            </div>
-          </div>
-        </div>
+        {/* Comptage réel des signaux */}
+        <p className="text-xs text-fs-muted">
+          {counts.positive > 0 && (
+            <span className="text-score-hi">{counts.positive} favorable{counts.positive > 1 ? 's' : ''}</span>
+          )}
+          {counts.positive > 0 && counts.negative > 0 && <span> · </span>}
+          {counts.negative > 0 && (
+            <span className="text-amber-deep">{counts.negative} à surveiller</span>
+          )}
+          {(counts.positive > 0 || counts.negative > 0) && counts.neutral > 0 && <span> · </span>}
+          {counts.neutral > 0 && <span>{counts.neutral} neutre{counts.neutral > 1 ? 's' : ''}</span>}
+          <span> sur {counts.total} condition{counts.total > 1 ? 's' : ''} relevée{counts.total > 1 ? 's' : ''}</span>
+        </p>
 
-        {/* Factors */}
-        {data.factors && data.factors.length > 0 && (
-          <div className="space-y-1 pt-1 border-t">
-            {data.factors.map((factor: { name: string; impact: 'positive' | 'neutral' | 'negative'; description: string }, i: number) => {
-              const FactorIcon = FACTOR_ICONS[factor.name] || Fish;
-              const style = IMPACT_STYLES[factor.impact];
-              const ImpactIcon = style.Icon;
-              return (
-                <div key={i} className={`flex items-center gap-2 rounded px-2 py-1 ${style.bg}`}>
-                  <FactorIcon className={`h-3 w-3 shrink-0 ${style.text}`} />
-                  <span className={`text-xs font-medium ${style.text} flex-1 truncate`}>{factor.name}</span>
-                  <span className={`text-[10px] ${style.text} truncate max-w-30`}>{factor.description}</span>
-                  <ImpactIcon className={`h-3 w-3 shrink-0 ${style.text}`} />
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        {/* Conditions actuelles, défavorables remontées en premier */}
+        <ul className="space-y-1 border-t border-line pt-2">
+          {sorted.map((factor) => {
+            const FactorIcon = FACTOR_ICONS[factor.name] ?? Fish;
+            const style = IMPACT_STYLES[factor.impact];
+            const ImpactIcon = style.Icon;
+            return (
+              <li
+                key={`${factor.name}-${factor.description}`}
+                className={cn('flex items-center gap-2 rounded-fs-sm border px-2 py-1.5', style.row)}
+              >
+                <FactorIcon className={cn('h-3.5 w-3.5 shrink-0', style.icon)} aria-hidden />
+                <span className="flex-1 truncate text-xs font-medium text-ink">{factor.name}</span>
+                <span className="max-w-[10rem] truncate text-[11px] text-fs-muted">
+                  {factor.description}
+                </span>
+                <ImpactIcon
+                  className={cn('h-3.5 w-3.5 shrink-0', style.icon)}
+                  aria-label={`Impact ${style.sr}`}
+                />
+              </li>
+            );
+          })}
+        </ul>
+
+        <p className="text-[11px] text-faint">
+          Conditions actuelles, pas un score. L’indice de pêche est en haut de la fiche.
+        </p>
+      </div>
+    </CardShell>
   );
 }

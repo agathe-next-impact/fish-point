@@ -1,4 +1,5 @@
-import { AlertTriangle, Check, X, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
+import { AlertTriangle, ExternalLink, FileQuestion, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { REGULATION_TYPE_LABELS } from '@/lib/constants';
 import { formatRegulationPeriod } from '@/services/regulations.service';
@@ -6,17 +7,33 @@ import type { SpotRegulationData } from '@/types/spot';
 
 interface SpotRegulationsProps {
   regulations: SpotRegulationData[];
+  /** Slug du spot — cible du CTA « Ajouter une observation ». */
+  spotSlug?: string;
 }
 
-export function SpotRegulations({ regulations }: SpotRegulationsProps) {
+export function SpotRegulations({ regulations, spotSlug }: SpotRegulationsProps) {
+  // Données réellement absentes (props, pas de fetch → jamais un état de chargement).
+  // On NE dit JAMAIS « aucune restriction connue » : lu à tort comme une autorisation.
+  // Cf. confiance réglementaire — on affiche un état explicite « donnée indisponible ».
   if (regulations.length === 0) {
     return (
-      <section className="rounded-lg border p-4">
-        <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
-          <Check className="h-5 w-5 text-green-500" />
+      <section className="rounded-fs-lg border border-line p-4">
+        <h2 className="text-lg font-semibold mb-2 flex items-center gap-2 text-ink">
+          <FileQuestion className="h-5 w-5 text-fs-muted" aria-hidden />
           Réglementation
         </h2>
-        <p className="text-sm text-muted-foreground">Aucune restriction spécifique connue pour ce spot.</p>
+        <p className="text-sm text-fs-muted">
+          <span className="font-semibold text-ink">Donnée indisponible</span> — aucune observation récente
+          vérifiée. Consultez la source officielle (préfecture / AAPPMA) avant votre sortie.
+        </p>
+        {spotSlug && (
+          <Link
+            href={`/spots/${spotSlug}/edit`}
+            className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-line px-3 py-1.5 text-sm font-semibold text-teal-deep transition-colors hover:border-fs-accent hover:text-fs-accent-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <Plus className="h-4 w-4" aria-hidden /> Ajouter une observation
+          </Link>
+        )}
       </section>
     );
   }

@@ -7,15 +7,15 @@
  *   2. The following env vars are set (in `.env.local`):
  *        - BLOB_READ_WRITE_TOKEN  (provided automatically by `vercel env pull`)
  *   3. The PMTiles file is downloaded locally. Default expected path:
- *        ./tiles/france.pmtiles
- *      Download from https://app.protomaps.com (draw France, then download).
+ *        ./tiles/western-europe.pmtiles
+ *      Extract from a Protomaps planet build with the project bbox.
  *
  * Usage:
  *   npm run upload-tiles
- *   npm run upload-tiles -- ./path/to/file.pmtiles --key=france.pmtiles
+ *   npm run upload-tiles -- ./path/to/file.pmtiles --key=western-europe.pmtiles
  *
  * After upload, the script prints the public URL — paste it into
- * `NEXT_PUBLIC_PMTILES_URL` (without the trailing `/france.pmtiles`).
+ * `NEXT_PUBLIC_PMTILES_URL` (without the trailing PMTiles filename).
  */
 
 import { createReadStream, statSync } from 'node:fs';
@@ -28,8 +28,8 @@ try {
   // .env.local optional — env vars may already be set (e.g. CI)
 }
 
-const DEFAULT_LOCAL_PATH = './tiles/france.pmtiles';
-const DEFAULT_KEY = 'france.pmtiles';
+const DEFAULT_LOCAL_PATH = './tiles/western-europe.pmtiles';
+const DEFAULT_KEY = 'western-europe.pmtiles';
 
 function parseArgs(argv: string[]): { localPath: string; key: string } {
   const positional = argv.filter((a) => !a.startsWith('--'));
@@ -97,7 +97,7 @@ async function main(): Promise<void> {
   console.log(`  1. Set in .env.local:`);
   console.log(`       NEXT_PUBLIC_PMTILES_URL="${baseUrl}"`);
   console.log(`  2. Set the same value in Vercel project env vars (Preview + Production)`);
-  console.log(`  3. For mobile, set EXPO_PUBLIC_PMTILES_URL to the same URL`);
+  console.log(`  3. For the PWA, keep NEXT_PUBLIC_PMTILES_URL pointing to the uploaded file`);
 }
 
 main().catch((err) => {

@@ -54,7 +54,7 @@
       "expo-image",
       "expo-sqlite",
       "expo-web-browser",
-      "@rnmapbox/maps"
+      "@maplibre/maplibre-react-native"
     ]
   }
 }

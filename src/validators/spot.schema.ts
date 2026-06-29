@@ -1,10 +1,18 @@
 import { z } from 'zod';
+import {
+  FISHING_MODE_TYPES,
+  FISHING_TECHNIQUE_TYPES,
+} from '@/lib/fishing-type-classification';
+import type { SpotQueryFilters } from '@/lib/spot-filter-params';
 
 export const WaterTypeEnum = z.enum([
   'RIVER', 'LAKE', 'POND', 'SEA', 'CANAL', 'STREAM',
 ]);
 
 export const WaterCategoryEnum = z.enum(['FIRST', 'SECOND']);
+
+/** Niveau de spot (modèle 3 niveaux) — aligné sur l'enum Prisma `SpotKind`. */
+export const SpotKindEnum = z.enum(['WATER_BODY', 'ACCESS_ZONE']);
 
 export const FishingTypeEnum = z.enum([
   'SPINNING', 'FLY', 'COARSE', 'CARP', 'SURFCASTING',
@@ -38,6 +46,10 @@ export const createSpotSchema = z.object({
   longitude: z.number().min(-180, 'Longitude invalide').max(180, 'Longitude invalide'),
   waterType: WaterTypeEnum,
   waterCategory: WaterCategoryEnum.optional(),
+  // Modèle 3 niveaux : niveau du spot créé. Défaut WATER_BODY (plan d'eau public) →
+  // rétro-compatible (les anciens clients qui n'envoient pas `kind` créent un plan d'eau).
+  // ACCESS_ZONE = zone/accès public ; son parentId est résolu côté serveur (proximité).
+  kind: SpotKindEnum.default('WATER_BODY'),
   fishingTypes: z.array(FishingTypeEnum).min(1, 'Au moins un type de pêche est requis'),
   accessibility: accessibilitySchema.optional(),
   species: z.array(spotSpeciesInputSchema).optional(),
@@ -85,3 +97,105 @@ export type CreateSpotFormInput = z.input<typeof createSpotSchema>;
 export type UpdateSpotInput = z.infer<typeof updateSpotSchema>;
 export type SpotFiltersInput = z.infer<typeof spotFiltersSchema>;
 export type NearbyQuery = z.infer<typeof nearbyQuerySchema>;
+
+// ── Query liste Explorer (`GET /api/spots`) ─────────────────────────────────
+// Centralisé ici (convergence des filtres, sous-étape 3) : ce schéma valide les
+// query params de la liste à la frontière HTTP, en réutilisant les enums Zod déjà
+// définis ci-dessus (WaterTypeEnum, WaterCategoryEnum, FishCategoryEnum). Le sous-
+// ensemble « filtres sortie » est ensuite mappé vers le type canonique
+// `SpotQueryFilters` (cf. `toSpotQueryFilters`) consommé par `buildSpotWhere`.
+// Les concerns propres liste (bbox north/south/east/west, géo lat/lng/radius,
+// pagination page/limit) restent gérés par la route. Extraction iso-fonctionnelle.
+
+const AccessTypeEnum = z.enum([
+  'FREE',
+  'FISHING_CARD',
+  'AAPPMA_SPECIFIC',
+  'PAID',
+  'MEMBERS_ONLY',
+  'RESTRICTED',
+  'PRIVATE',
+]);
+const FishingModeEnum = z.enum(FISHING_MODE_TYPES);
+const FishingTechniqueEnum = z.enum(FISHING_TECHNIQUE_TYPES);
+
+const numeric = (schema: z.ZodNumber) =>
+  z.preprocess((v) => (v === undefined || v === '' ? undefined : Number(v)), schema);
+const boolFlag = z.preprocess((v) => v === 'true' || v === true, z.boolean()).optional();
+
+/**
+ * Validation Zod des query params de la liste Explorer (frontière /api/spots).
+ * Tolérante : tout invalide → 400 ; les listes multivaluées arrivent via getAll.
+ */
+export const spotsListQuerySchema = z.object({
+  page: numeric(z.number().int().min(1)).optional().default(1),
+  limit: numeric(z.number().int().min(1).max(100)).optional().default(20),
+  department: z.string().min(1).optional(),
+  // Modèle 3 niveaux : absent ⇒ défaut WATER_BODY appliqué par `buildSpotWhere`
+  // (la liste ne montre que les plans d'eau). Une valeur explicite remplace le défaut.
+  kind: z.array(SpotKindEnum).default([]),
+  waterType: z.array(WaterTypeEnum).default([]),
+  waterCategory: WaterCategoryEnum.optional(),
+  fishCategory: z.array(FishCategoryEnum).default([]),
+  accessType: AccessTypeEnum.optional(),
+  search: z.string().optional(),
+  minRating: numeric(z.number().min(0).max(5)).optional(),
+  minFishabilityScore: numeric(z.number().min(0).max(100)).optional(),
+  maxFishabilityScore: numeric(z.number().min(0).max(100)).optional(),
+  species: z.array(z.string().min(1)).default([]),
+  fishingMode: z.array(FishingModeEnum).default([]),
+  fishingTechnique: z.array(FishingTechniqueEnum).default([]),
+  parking: boolFlag,
+  boatLaunch: boolFlag,
+  pmr: boolFlag,
+  nightFishing: boolFlag,
+  // ── Filtres « affichage » (absorbés depuis l'ancien overlay carte) ──
+  // Mêmes noms de params que la sérialisation partagée et la route tuiles :
+  // `premiumOnly=true` et `origin=USER` (⇔ exclure les spots auto-découverts).
+  // Appliqués désormais à la LISTE comme à la carte (parité, sous-étape 5).
+  premiumOnly: boolFlag,
+  origin: z.literal('USER').optional(),
+  lat: numeric(z.number().min(-90).max(90)).optional(),
+  lng: numeric(z.number().min(-180).max(180)).optional(),
+  radius: numeric(z.number().min(100).max(200000)).optional(),
+  north: numeric(z.number().min(-90).max(90)).optional(),
+  south: numeric(z.number().min(-90).max(90)).optional(),
+  east: numeric(z.number().min(-180).max(180)).optional(),
+  west: numeric(z.number().min(-180).max(180)).optional(),
+});
+
+export type SpotsListQuery = z.infer<typeof spotsListQuerySchema>;
+
+/**
+ * Mappe le sous-ensemble « filtres sortie » de la query liste vers le type canonique
+ * `SpotQueryFilters` (consommé par `buildSpotWhere`). Pur : les arrays vides (defaults
+ * `[]`) deviennent `undefined` pour coller au type canonique ; `buildSpotWhere` les
+ * ignore de toute façon (gardes `length > 0`). N'inclut PAS bbox/géo/pagination, qui
+ * restent des concerns propres à la route.
+ */
+export function toSpotQueryFilters(q: SpotsListQuery): SpotQueryFilters {
+  return {
+    department: q.department,
+    kind: q.kind.length > 0 ? q.kind : undefined,
+    waterType: q.waterType.length > 0 ? q.waterType : undefined,
+    waterCategory: q.waterCategory,
+    fishCategory: q.fishCategory.length > 0 ? q.fishCategory : undefined,
+    accessType: q.accessType,
+    search: q.search,
+    minRating: q.minRating,
+    minFishabilityScore: q.minFishabilityScore,
+    maxFishabilityScore: q.maxFishabilityScore,
+    species: q.species.length > 0 ? q.species : undefined,
+    fishingMode: q.fishingMode.length > 0 ? q.fishingMode : undefined,
+    fishingTechnique: q.fishingTechnique.length > 0 ? q.fishingTechnique : undefined,
+    parking: q.parking,
+    boatLaunch: q.boatLaunch,
+    pmr: q.pmr,
+    nightFishing: q.nightFishing,
+    // Filtres « affichage » : symétrique de `serializeSpotFilters`. On ne pose une
+    // contrainte canonique QUE pour la valeur restrictive (sinon `undefined`), pour
+    // que `buildSpotWhere` n'ajoute la clause que dans ce cas (cf. ses gardes ===).
+    premiumOnly: q.premiumOnly === true ? true : undefined,
+    showAutoDiscovered: q.origin === 'USER' ? false : undefined,
+  };
+}

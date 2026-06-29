@@ -12,8 +12,8 @@ export function showLocalNotification(title: string, body: string, options?: Not
 
   new Notification(title, {
     body,
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    icon: '/favicon.ico',
+    badge: '/favicon.ico',
     ...options,
   });
 }

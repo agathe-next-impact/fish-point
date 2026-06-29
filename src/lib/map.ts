@@ -17,13 +17,20 @@ export const DEFAULT_CENTER = {
   zoom: 6,
 } as const;
 
+export const WESTERN_EUROPE_BOUNDS: [[number, number], [number, number]] = [
+  [-10.62, 35.49],
+  [18.52, 58.67],
+];
+
 export const FRANCE_BOUNDS: [[number, number], [number, number]] = [
   [-5.56, 41.31],
   [9.66, 51.12],
 ];
 
+export const MAP_MAX_BOUNDS = WESTERN_EUROPE_BOUNDS;
+
 export const PMTILES_URL = process.env.NEXT_PUBLIC_PMTILES_URL ?? '';
-export const PMTILES_FILE = 'france.pmtiles';
+export const PMTILES_FILE = process.env.NEXT_PUBLIC_PMTILES_FILE ?? 'western-europe.pmtiles';
 
 const PROTOMAPS_SOURCE_ID = 'protomaps';
 const IGN_ORTHO_WMTS =
@@ -129,7 +136,12 @@ export function calculateBounds(
   padding = 0.01,
 ): { north: number; south: number; east: number; west: number } {
   if (points.length === 0) {
-    return { north: 51.12, south: 41.31, east: 9.66, west: -5.56 };
+    return {
+      north: MAP_MAX_BOUNDS[1][1],
+      south: MAP_MAX_BOUNDS[0][1],
+      east: MAP_MAX_BOUNDS[1][0],
+      west: MAP_MAX_BOUNDS[0][0],
+    };
   }
 
   const lats = points.map((p) => p.latitude);
@@ -140,5 +152,65 @@ export function calculateBounds(
     south: Math.min(...lats) - padding,
     east: Math.max(...lngs) + padding,
     west: Math.min(...lngs) - padding,
+  };
+}
+
+/** Coin SO/NE attendu par MapLibre `fitBounds` : `[[west, south], [east, north]]`. */
+export type LngLatBoundsTuple = [[number, number], [number, number]];
+
+/** Caméra initiale dérivée d'un ensemble de points pour la carte des enregistrés. */
+export type SavedSpotsCamera =
+  | { kind: 'bounds'; bounds: LngLatBoundsTuple }
+  | { kind: 'center'; longitude: number; latitude: number; zoom: number };
+
+/** Niveau de zoom quand on centre sur un point unique (ou des points confondus). */
+const SINGLE_SPOT_ZOOM = 12;
+
+/**
+ * Dérive la caméra initiale de `SavedSpotsMap` à partir des coordonnées affichées.
+ * PURE (aucun I/O, aucune dépendance MapLibre) — testable isolément.
+ *
+ * - 0 spot   → centre `DEFAULT_CENTER` (zoom France), aucune enveloppe à cadrer.
+ * - 1 spot   → centre sur le point, zoom rapproché (`fitBounds` sur un point unique
+ *              produirait une enveloppe dégénérée et un zoom max inutilisable).
+ * - ≥2 points distincts → enveloppe `[[west, south], [east, north]]` pour `fitBounds`.
+ * - ≥2 points TOUS confondus → traités comme 1 spot (centre + zoom), pas une bbox plate.
+ *
+ * Les coordonnées non finies sont ignorées (robustesse face à des données partielles).
+ */
+export function savedSpotsCamera(
+  points: { latitude: number; longitude: number }[],
+): SavedSpotsCamera {
+  const valid = points.filter(
+    (p) => Number.isFinite(p.latitude) && Number.isFinite(p.longitude),
+  );
+
+  if (valid.length === 0) {
+    return {
+      kind: 'center',
+      longitude: DEFAULT_CENTER.longitude,
+      latitude: DEFAULT_CENTER.latitude,
+      zoom: DEFAULT_CENTER.zoom,
+    };
+  }
+
+  const lats = valid.map((p) => p.latitude);
+  const lngs = valid.map((p) => p.longitude);
+  const south = Math.min(...lats);
+  const north = Math.max(...lats);
+  const west = Math.min(...lngs);
+  const east = Math.max(...lngs);
+
+  // Enveloppe dégénérée (1 point, ou plusieurs confondus) → centre + zoom fixe.
+  if (south === north && west === east) {
+    return { kind: 'center', longitude: west, latitude: south, zoom: SINGLE_SPOT_ZOOM };
+  }
+
+  return {
+    kind: 'bounds',
+    bounds: [
+      [west, south],
+      [east, north],
+    ],
   };
 }

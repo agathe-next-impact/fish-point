@@ -25,37 +25,44 @@ export async function getContextePiscicole(
     cacheKey,
     async () => {
       try {
-        // WFS GetFeature request with spatial filter
+        // SANDRE = MapServer. Trois pièges corrigés (diagnostic 2026-06-21) :
+        //  1. outputFormat=application/json REFUSÉ pour cette couche (+ geojson OGR cassé
+        //     côté serveur) → on lit le GML par défaut.
+        //  2. CQL_FILTER (DWITHIN/BBOX) est une extension GeoServer IGNORÉE par MapServer
+        //     (renvoyait le 1er feature quel que soit le point) → paramètre OGC `FILTER`
+        //     (fes:Filter XML) sur la vraie colonne géométrie `msGeometry` (pas `geom`).
+        //  3. CRS urn EPSG:4326 ⇒ ordre d'axes lat/lon (pas lon/lat).
+        const filter =
+          `<fes:Filter xmlns:fes="http://www.opengis.net/fes/2.0" xmlns:gml="http://www.opengis.net/gml/3.2">` +
+          `<fes:Intersects><fes:ValueReference>msGeometry</fes:ValueReference>` +
+          `<gml:Point srsName="urn:ogc:def:crs:EPSG::4326"><gml:pos>${lat} ${lon}</gml:pos></gml:Point>` +
+          `</fes:Intersects></fes:Filter>`;
         const params = new URLSearchParams({
           service: 'WFS',
           version: '2.0.0',
           request: 'GetFeature',
           typeName: 'sa:ContextePiscicole_FXX',
-          outputFormat: 'application/json',
           count: '1',
-          CQL_FILTER: `DWITHIN(geom,POINT(${lon} ${lat}),1,kilometers)`,
+          FILTER: filter,
         });
 
         const res = await fetch(`${SANDRE_WFS_BASE}?${params}`);
         if (!res.ok) return null;
 
-        const data = await res.json();
-        const feature = data.features?.[0];
-        if (!feature?.properties) return null;
+        const xml = await res.text();
+        const pick = (tag: string) =>
+          xml.match(new RegExp(`<(?:\\w+:)?${tag}>([^<]+)</(?:\\w+:)?${tag}>`))?.[1]?.trim() ?? '';
 
-        const props = feature.properties;
+        // CdCtxPisci porte le domaine en clair ("Salmonicole" / "Cyprinicole" / "Intermédiaire").
+        const domaineRaw = pick('CdCtxPisci');
+        if (!domaineRaw) return null;
 
-        // Determine domain from properties
-        const domaine = parseDomaine(
-          props.LbContextePiscicole || props.NomContextePiscicole || '',
-        );
-
-        // Determine category from domain
+        const domaine = parseDomaine(domaineRaw);
         const categorie = domaine === 'salmonicole' ? 'FIRST' : domaine === 'cyprinicole' ? 'SECOND' : null;
 
         return {
-          code: props.CdContextePiscicole || props.gml_id || '',
-          name: props.LbContextePiscicole || props.NomContextePiscicole || '',
+          code: pick('NumCtxPisci'),
+          name: pick('NomCtxPisci'),
           domaine,
           categorie,
         };

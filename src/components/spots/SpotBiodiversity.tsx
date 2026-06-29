@@ -3,9 +3,12 @@
 import { useState, useEffect } from 'react';
 import { Leaf, Fish, Bug, Bird } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { DataUnavailable, shouldShowDataUnavailable } from './DataUnavailable';
 
 interface SpotBiodiversityProps {
   spotId: string;
+  /** Slug du spot — cible du CTA quand la section est vide. */
+  spotSlug?: string;
 }
 
 interface INatObservation {
@@ -32,31 +35,45 @@ interface BiodiversityData {
   gbif: GBIFSpecies[];
 }
 
-export function SpotBiodiversity({ spotId }: SpotBiodiversityProps) {
+export function SpotBiodiversity({ spotId, spotSlug }: SpotBiodiversityProps) {
   const [data, setData] = useState<BiodiversityData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
 
   useEffect(() => {
+    let active = true;
     async function fetchData() {
       try {
         const res = await fetch(`/api/spots/${spotId}/biodiversity`);
-        if (!res.ok) return;
+        if (!res.ok) throw new Error(`biodiversity fetch failed: ${res.status}`);
         const body = await res.json();
-        setData(body.data);
+        if (active) setData(body.data ?? null);
       } catch {
-        // Non-critical
+        // On marque l'échec pour NE PAS afficher « donnée indisponible » sur une panne.
+        if (active) setIsError(true);
       } finally {
-        setIsLoading(false);
+        if (active) setIsLoading(false);
       }
     }
     fetchData();
+    return () => {
+      active = false;
+    };
   }, [spotId]);
 
-  if (isLoading || !data) return null;
+  // Chargement : on conserve le comportement existant (la section ne s'affiche pas).
+  if (isLoading) return null;
+
+  const hasData = data !== null && (data.inaturalist.totalCount > 0 || data.gbif.length > 0);
+  const isEmpty = !hasData;
+  if (!hasData || data === null) {
+    // Succès vide → message explicite ; erreur → on ne masque pas la panne.
+    return shouldShowDataUnavailable({ isLoading, isError, isEmpty }) ? (
+      <DataUnavailable spotSlug={spotSlug} sectionLabel="Biodiversité autour du spot" />
+    ) : null;
+  }
 
   const { inaturalist, gbif } = data;
-  const hasData = inaturalist.totalCount > 0 || gbif.length > 0;
-  if (!hasData) return null;
 
   return (
     <section>
