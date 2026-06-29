@@ -19,7 +19,20 @@
       "Bash(curl -s --max-time 25 -w '\\\\n  HTTP %{http_code}\\\\n' http://localhost:3000/api/spots/cmm4qsa6h000fko3c5h9m73iq/reviews)",
       "Bash(curl -s -o /dev/null -w '  sans params       → HTTP %{http_code}\\\\n' --max-time 30 \"http://localhost:3000/spots/lac-d-annecy\")",
       "Bash(curl -s -o /dev/null -w '  avec contexte sortie → HTTP %{http_code}\\\\n' --max-time 30 \"http://localhost:3000/spots/lac-d-annecy?species=brochet&mode=SHORE&lat=45.9&lng=6.13\")",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\(Object.entries\\(p.scripts\\).map\\(\\([k,v]\\)=>k+': '+v\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(git ls-remote *)",
+      "Bash(grep -vE 'CRON_SECRET|process\\\\.env|AUTH_SECRET|STRIPE_|UPSTASH|R2_|RESEND|GOOGLE_|OPENWEATHER|HUBEAU|BLOB_|//|\\\\*')",
+      "Bash(node *)",
+      "Bash(grep *)",
+      "Bash(npx vitest *)",
+      "Bash(awk '{print $NF}')",
+      "Bash(echo \"=== tsc exit: $? ===\")",
+      "Bash(echo \"=== eslint \\(fichiers du commit\\) exit: $? ===\")",
+      "Bash(echo \"=== push exit: $? ===\")",
+      "PowerShell($g = Get-Command gh -ErrorAction SilentlyContinue; if \\($g\\) { \"gh trouvé: $\\($g.Source\\)\"; gh auth status } else { \"gh NON installé\" })",
+      "Bash(git remote *)",
+      "Bash(echo \"=== eslint exit: $? ===\")"
     ]
   }
 }

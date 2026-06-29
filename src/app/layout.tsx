@@ -1,6 +1,7 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Bricolage_Grotesque, JetBrains_Mono } from 'next/font/google';
 import { DEFAULT_METADATA } from '@/config/seo';
+import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { QueryProvider } from '@/components/providers/QueryProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
@@ -23,6 +24,10 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = DEFAULT_METADATA;
+
+export const viewport: Viewport = {
+  themeColor: '#08303a',
+};
 
 // Apply persisted theme + accent before first paint to avoid a flash.
 const themeInitScript = `(function(){try{var s=localStorage.getItem('fishspot-user-preferences');var p=s?JSON.parse(s).state.preferences:null;var d=document.documentElement;var t=p&&p.theme?p.theme:'system';if(t==='system'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}d.classList.remove('light','dark');d.classList.add(t);d.dataset.accent=(p&&p.accent)||'lac';}catch(e){document.documentElement.dataset.accent='lac';}})();`;
@@ -47,6 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <GeolocationProvider>
                   {children}
                   <ToastContainer />
+                  <InstallPrompt />
                 </GeolocationProvider>
               </ServiceWorkerProvider>
             </ThemeProvider>
